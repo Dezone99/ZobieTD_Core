@@ -1,56 +1,112 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using ZobieTDCore.Services.AssetBundle.Base;
+using ZobieTDCore.Contracts;
+using ZobieTDCore.Contracts.Items.AssetBundle;
 
 namespace ZobieTDCore.Services.AssetBundle
 {
     public class AssetBundleManager
     {
-        private readonly Dictionary<string, IAssetBundleReference> loadedBundles = new Dictionary<string, IAssetBundleReference>();
-        private readonly Dictionary<IAssetReference, string> assetToBundle = new Dictionary<IAssetReference, string>();
+        public static AssetBundleManager Instance { get; } = new AssetBundleManager();
 
+        private Dictionary<string, IAssetBundleReference> loadedBundles = new Dictionary<string, IAssetBundleReference>();
+        private Dictionary<IAssetReference, string> spriteToBundle = new Dictionary<IAssetReference, string>();
+
+        public void Test()
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Console.WriteLine("Hello");
+#endif
+        }
         public IAssetReference LoadSprite(string bundleName, string spriteName)
         {
-            var bundle = loadedBundles[bundleName];
-            var asset = bundle.LoadSingle(spriteName);
-            assetToBundle[asset] = bundleName;
-            return asset;
+            var bundle = LoadAssetBundle(bundleName);
+            var sprite = bundle.LoadSingleAsset(spriteName);
+            spriteToBundle[sprite] = bundleName;
+            AssetBundleUsageManager.Instance.RegisterAsset(sprite, bundleName);
+            return sprite;
         }
 
-        public List<IAssetReference> LoadAnimation(string bundleName, string prefix)
+        public IEnumerable<IAssetReference> LoadAnimation(string bundleName, string prefix)
         {
-            var bundle = loadedBundles[bundleName];
-            var assets = bundle.LoadAssets(prefix).ToList();
-            foreach (var asset in assets)
-                assetToBundle[asset] = bundleName;
-            return assets;
+            var bundle = LoadAssetBundle(bundleName);
+            var sprites = new List<IAssetReference>();
+            foreach (var name in bundle.GetAllAssetNames())
+            {
+                if (name.Contains(prefix))
+                {
+                    var sprite = bundle.LoadSingleAsset(name);
+                    spriteToBundle[sprite] = bundleName;
+                    AssetBundleUsageManager.Instance.RegisterAsset(sprite, bundleName);
+                    sprites.Add(sprite);
+                }
+            }
+            return sprites;
         }
 
-        public void ReleaseAsset(IAssetReference asset)
+        public void ReleaseSprite(IAssetReference sprite)
         {
-            assetToBundle.Remove(asset);
-            // Optional: Notify usage manager
+            if (spriteToBundle.TryGetValue(sprite, out var bundleName))
+            {
+                AssetBundleUsageManager.Instance.UnregisterAsset(sprite);
+            }
         }
 
-        public void ReleaseAssets(List<IAssetReference> assets)
+        public void ReleaseAnimation(IEnumerable<IAssetReference> sprites)
         {
-            foreach (var asset in assets)
-                assetToBundle.Remove(asset);
+            foreach (var sprite in sprites)
+                ReleaseSprite(sprite);
         }
 
-        public string GetBundleNameOf(IAssetReference asset)
-            => assetToBundle.TryGetValue(asset, out var name) ? name : null;
+        public string? GetBundleNameOfSprite(IAssetReference sprite)
+        {
+            return spriteToBundle.TryGetValue(sprite, out var bundleName) ? bundleName : null;
+        }
 
-        public void RegisterBundle(string name, IAssetBundleReference bundle)
-            => loadedBundles[name] = bundle;
+        public void UpdateCachedAssetBundle()
+        {
+            var unityEngineContract = ContractManager.Instance.UnityEngineContract;
+            if (unityEngineContract == null)
+            {
+                throw new InvalidOperationException("Core engine was not initalized");
+            }
+            var now = unityEngineContract.TimeProvider.TimeNow;
+            var toUnload = new List<string>();
 
-        public void UnloadBundle(string name)
-            => loadedBundles.Remove(name);
+            foreach (var bundleName in AssetBundleUsageManager.Instance.GetNeedToUnloadBundle())
+            {
+                var contract = ContractManager.Instance.UnityEngineContract;
+                ForceUnloadBundle(bundleName);
+            }
+        }
 
-        public List<string> GetLoadedBundleNames() => loadedBundles.Keys.ToList();
+        public List<string> GetLoadedBundles() => new List<string>(loadedBundles.Keys);
+
+        private IAssetBundleReference LoadAssetBundle(string bundleName)
+        {
+            var unityEngineContract = ContractManager.Instance.UnityEngineContract;
+            if (unityEngineContract == null)
+            {
+                throw new InvalidOperationException("Core engine was not initalized");
+            }
+            if (!loadedBundles.TryGetValue(bundleName, out var bundle))
+            {
+                var path = Path.Combine(unityEngineContract.StreamingAssetPath, bundleName);
+                bundle = unityEngineContract.LoadAssetBundleFromFile(path);
+                loadedBundles[bundleName] = bundle;
+            }
+            return bundle;
+        }
+
+        private void ForceUnloadBundle(string bundleName)
+        {
+            if (loadedBundles.TryGetValue(bundleName, out var bundle))
+            {
+                bundle.Unload(unloadAllAsset: true);
+                loadedBundles.Remove(bundleName);
+            }
+        }
     }
 
 }

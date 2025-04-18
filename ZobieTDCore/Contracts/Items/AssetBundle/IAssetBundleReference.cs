@@ -1,13 +1,17 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 
-namespace ZobieTDCore.Services.AssetBundle.Base
+namespace ZobieTDCore.Contracts.Items.AssetBundle
 {
     public interface IAssetBundleReference
     {
+        void Unload(bool unloadAllAsset);
         string BundleName { get; }
         IEnumerable<IAssetReference> LoadAssets(string filter);
-        IAssetReference LoadSingle(string name);
+        IAssetReference LoadSingleAsset(string name);
+
+        IEnumerable<string> GetAllAssetNames();
     }
 }
