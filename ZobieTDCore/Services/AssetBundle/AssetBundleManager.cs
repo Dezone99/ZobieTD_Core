@@ -11,57 +11,41 @@ namespace ZobieTDCore.Services.AssetBundle
         public static AssetBundleManager Instance { get; } = new AssetBundleManager();
 
         private Dictionary<string, IAssetBundleReference> loadedBundles = new Dictionary<string, IAssetBundleReference>();
-        private Dictionary<IAssetReference, string> spriteToBundle = new Dictionary<IAssetReference, string>();
+        private Dictionary<IAssetReference, string> assetToBundle = new Dictionary<IAssetReference, string>();
 
-        public void Test()
-        {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Console.WriteLine("Hello");
-#endif
-        }
-        public IAssetReference LoadSprite(string bundleName, string spriteName)
+        // Sử dụng cho 1 sprite trong spr sheet
+        public IAssetReference LoadSingleAsset(string bundleName, string spriteName)
         {
             var bundle = LoadAssetBundle(bundleName);
             var sprite = bundle.LoadSingleAsset(spriteName);
-            spriteToBundle[sprite] = bundleName;
-            AssetBundleUsageManager.Instance.RegisterAsset(sprite, bundleName);
+            assetToBundle[sprite] = bundleName;
+            AssetBundleUsageManager.Instance.RegisterAssetReference(sprite, bundle);
             return sprite;
         }
 
-        public IEnumerable<IAssetReference> LoadAnimation(string bundleName, string prefix)
+        // Sử dụng cho toàn bộ sprite trong spr sheet để tạo animation 
+        public IAssetReference LoadAllAsset(string bundleName)
         {
             var bundle = LoadAssetBundle(bundleName);
-            var sprites = new List<IAssetReference>();
-            foreach (var name in bundle.GetAllAssetNames())
-            {
-                if (name.Contains(prefix))
-                {
-                    var sprite = bundle.LoadSingleAsset(name);
-                    spriteToBundle[sprite] = bundleName;
-                    AssetBundleUsageManager.Instance.RegisterAsset(sprite, bundleName);
-                    sprites.Add(sprite);
-                }
-            }
-            return sprites;
+            var assetRef = bundle.LoadAllAssets();
+            assetToBundle[assetRef] = bundleName;
+            AssetBundleUsageManager.Instance.RegisterAssetReference(assetRef, bundle);
+            return assetRef;
         }
 
-        public void ReleaseSprite(IAssetReference sprite)
+
+        public void ReleaseAssetRef(IAssetReference assetRef)
         {
-            if (spriteToBundle.TryGetValue(sprite, out var bundleName))
+            if (assetToBundle.TryGetValue(assetRef, out var bundleName))
             {
-                AssetBundleUsageManager.Instance.UnregisterAsset(sprite);
+                AssetBundleUsageManager.Instance.UnregisterAssetReference(assetRef);
             }
         }
 
-        public void ReleaseAnimation(IEnumerable<IAssetReference> sprites)
-        {
-            foreach (var sprite in sprites)
-                ReleaseSprite(sprite);
-        }
 
         public string? GetBundleNameOfSprite(IAssetReference sprite)
         {
-            return spriteToBundle.TryGetValue(sprite, out var bundleName) ? bundleName : null;
+            return assetToBundle.TryGetValue(sprite, out var bundleName) ? bundleName : null;
         }
 
         public void UpdateCachedAssetBundle()

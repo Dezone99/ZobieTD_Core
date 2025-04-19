@@ -9,9 +9,8 @@ namespace ZobieTDCore.Contracts.Items.AssetBundle
     {
         void Unload(bool unloadAllAsset);
         string BundleName { get; }
-        IEnumerable<IAssetReference> LoadAssets(string filter);
         IAssetReference LoadSingleAsset(string name);
-
-        IEnumerable<string> GetAllAssetNames();
+        IAssetReference LoadAllAssets();
+        bool Contain(IAssetReference asset);
     }
 }
