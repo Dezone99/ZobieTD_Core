@@ -6,6 +6,10 @@ using ZobieTDCore.Contracts.Items.AssetBundle;
 
 namespace ZobieTDCore.Services.AssetBundle
 {
+    /// <summary>
+    /// Quản lý quá trình load, release và mapping các asset từ asset bundle.
+    /// Mọi asset đều được đóng gói dưới dạng IAssetReference (single hoặc group).
+    /// </summary>
     public class AssetBundleManager
     {
         public static AssetBundleManager Instance { get; } = new AssetBundleManager();
@@ -13,17 +17,28 @@ namespace ZobieTDCore.Services.AssetBundle
         private Dictionary<string, IAssetBundleReference> loadedBundles = new Dictionary<string, IAssetBundleReference>();
         private Dictionary<IAssetReference, string> assetToBundle = new Dictionary<IAssetReference, string>();
 
-        // Sử dụng cho 1 sprite trong spr sheet
+        /// <summary>
+        /// Load một asset duy nhất từ bundle, thường dùng cho sprite đơn.
+        /// Trả về IAssetReference đại diện cho 1 sprite.
+        /// </summary>
+        /// <param name="bundleName">Tên bundle đã build</param>
+        /// <param name="spriteName">Tên asset cụ thể</param>
+        /// <returns>IAssetReference chứa 1 sprite</returns>
         public IAssetReference LoadSingleAsset(string bundleName, string spriteName)
         {
             var bundle = LoadAssetBundle(bundleName);
-            var sprite = bundle.LoadSingleAsset(spriteName);
-            assetToBundle[sprite] = bundleName;
-            AssetBundleUsageManager.Instance.RegisterAssetReference(sprite, bundle);
-            return sprite;
+            var asset = bundle.LoadSingleAsset(spriteName);
+            assetToBundle[asset] = bundleName;
+            AssetBundleUsageManager.Instance.RegisterAssetReference(asset, bundle);
+            return asset;
         }
 
-        // Sử dụng cho toàn bộ sprite trong spr sheet để tạo animation 
+        /// <summary>
+        /// Load toàn bộ asset từ 1 bundle. Thường dùng để lấy animation (nhiều sprite).
+        /// Trả về IAssetReference có thể là danh sách sprite.
+        /// </summary>
+        /// <param name="bundleName">Tên bundle đã build</param>
+        /// <returns>IAssetReference chứa toàn bộ asset trong bundle</returns>
         public IAssetReference LoadAllAsset(string bundleName)
         {
             var bundle = LoadAssetBundle(bundleName);
@@ -33,7 +48,10 @@ namespace ZobieTDCore.Services.AssetBundle
             return assetRef;
         }
 
-
+        /// <summary>
+        /// Giải phóng asset reference khỏi hệ thống, giảm refCount và có thể trigger unload.
+        /// </summary>
+        /// <param name="assetRef">Asset đã được load trước đó</param>
         public void ReleaseAssetRef(IAssetReference assetRef)
         {
             if (assetToBundle.TryGetValue(assetRef, out var bundleName))
@@ -42,38 +60,41 @@ namespace ZobieTDCore.Services.AssetBundle
             }
         }
 
-
-        public string? GetBundleNameOfSprite(IAssetReference sprite)
+        /// <summary>
+        /// Lấy tên bundle mà assetRef thuộc về (nếu đã load).
+        /// </summary>
+        public string? GetBundleNameOfSprite(IAssetReference assetRef)
         {
-            return assetToBundle.TryGetValue(sprite, out var bundleName) ? bundleName : null;
+            return assetToBundle.TryGetValue(assetRef, out var bundleName) ? bundleName : null;
         }
 
+        /// <summary>
+        /// Duyệt toàn bộ các bundle đã load và tự động giải phóng bundle không còn được sử dụng.
+        /// </summary>
         public void UpdateCachedAssetBundle()
         {
-            var unityEngineContract = ContractManager.Instance.UnityEngineContract;
-            if (unityEngineContract == null)
-            {
-                throw new InvalidOperationException("Core engine was not initalized");
-            }
-            var now = unityEngineContract.TimeProvider.TimeNow;
-            var toUnload = new List<string>();
+            var unityEngineContract = ContractManager.Instance.UnityEngineContract
+                ?? throw new InvalidOperationException("Core engine was not initalized");
 
             foreach (var bundleName in AssetBundleUsageManager.Instance.GetNeedToUnloadBundle())
             {
-                var contract = ContractManager.Instance.UnityEngineContract;
                 ForceUnloadBundle(bundleName);
             }
         }
 
+        /// <summary>
+        /// Trả về danh sách các bundle đang được load hiện tại.
+        /// </summary>
         public List<string> GetLoadedBundles() => new List<string>(loadedBundles.Keys);
 
+        /// <summary>
+        /// Load bundle từ StreamingAssets nếu chưa có trong bộ nhớ.
+        /// </summary>
         private IAssetBundleReference LoadAssetBundle(string bundleName)
         {
-            var unityEngineContract = ContractManager.Instance.UnityEngineContract;
-            if (unityEngineContract == null)
-            {
-                throw new InvalidOperationException("Core engine was not initalized");
-            }
+            var unityEngineContract = ContractManager.Instance.UnityEngineContract
+                ?? throw new InvalidOperationException("Core engine was not initalized");
+
             if (!loadedBundles.TryGetValue(bundleName, out var bundle))
             {
                 var path = Path.Combine(unityEngineContract.StreamingAssetPath, bundleName);
@@ -83,6 +104,10 @@ namespace ZobieTDCore.Services.AssetBundle
             return bundle;
         }
 
+        /// <summary>
+        /// Giải phóng toàn bộ bundle khỏi bộ nhớ (force).
+        /// Gọi khi chắc chắn không còn ref nào.
+        /// </summary>
         private void ForceUnloadBundle(string bundleName)
         {
             if (loadedBundles.TryGetValue(bundleName, out var bundle))
@@ -92,5 +117,4 @@ namespace ZobieTDCore.Services.AssetBundle
             }
         }
     }
-
 }

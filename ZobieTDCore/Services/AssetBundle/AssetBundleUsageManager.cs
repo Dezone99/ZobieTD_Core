@@ -1,23 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using ZobieTDCore.Contracts;
 using ZobieTDCore.Contracts.Items;
 using ZobieTDCore.Contracts.Items.AssetBundle;
 
 namespace ZobieTDCore.Services.AssetBundle
 {
+    /// <summary>
+    /// Quản lý việc sử dụng asset reference và kiểm soát việc tự động giải phóng asset bundle.
+    /// Mỗi assetRef được theo dõi bằng refCount để xác định còn đang được sử dụng hay không.
+    /// </summary>
     internal class AssetBundleUsageManager
     {
         public static AssetBundleUsageManager Instance { get; } = new AssetBundleUsageManager();
 
-        internal class Tracker
+        private class Tracker
         {
             public int refCount;
             public float lastUsedTime;
         }
 
-        private IUnityEngineContract unityEngineContract = ContractManager.Instance.UnityEngineContract ?? throw new InvalidOperationException("Core engine was not initalized");
+        private readonly IUnityEngineContract unityEngineContract =
+            ContractManager.Instance.UnityEngineContract ?? throw new InvalidOperationException("Core engine was not initialized");
 
         // Vì với mỗi bundle name thì chỉ có duy nhất 1 bundle được load
         // nên ta ko thể dùng bundle ref để làm key, vì mỗi name có thể sẽ có nhiều ref đến nó
@@ -27,18 +31,24 @@ namespace ZobieTDCore.Services.AssetBundle
         // Sử dụng count để đếm trong trường hợp có nhiều renderer ref đến cùng 1 asset 
         // trong 1 bundle, ta không thể remove asset đó được mà chỉ giảm count thôi
         // đến khi count bằng 0 thì ta mới chắc chắn là đang ko có ref.
-        private Dictionary<IAssetReference, (string bundleName, int count)> assetRefs
-            = new Dictionary<IAssetReference, (string bundleName, int count)>();
+        private Dictionary<IAssetReference, (string bundleName, int count)> assetRefs = new Dictionary<IAssetReference, (string bundleName, int count)>();
+
         private float unloadTimeout = 60f;
 
+        // Debug: theo dõi stacktrace của object đang sử dụng asset
         private Dictionary<IAssetReference, HashSet<string>> debugUsageOwners = new Dictionary<IAssetReference, HashSet<string>>();
         private string GetCallerInfo() => System.Environment.StackTrace;
 
+        /// <summary>
+        /// Đăng ký assetRef được sử dụng, tăng refCount và đánh dấu thời điểm sử dụng cuối cùng.
+        /// </summary>
+        /// <param name="asset">Asset reference được sử dụng</param>
+        /// <param name="bundle">Bundle chứa asset</param>
         public void RegisterAssetReference(IAssetReference asset, IAssetBundleReference bundle)
         {
             if (unityEngineContract.IsDevelopmentBuild && !bundle.Contain(asset))
             {
-                throw new InvalidOperationException("Asset not belong to the bundle!");
+                throw new InvalidOperationException("Asset does not belong to the given bundle!");
             }
 
             if (!bundleTrackers.TryGetValue(bundle.BundleName, out var tracker))
@@ -46,6 +56,7 @@ namespace ZobieTDCore.Services.AssetBundle
                 tracker = new Tracker { lastUsedTime = unityEngineContract.TimeProvider.TimeNow };
                 bundleTrackers[bundle.BundleName] = tracker;
             }
+
             tracker.refCount++;
             tracker.lastUsedTime = unityEngineContract.TimeProvider.TimeNow;
 
@@ -53,7 +64,6 @@ namespace ZobieTDCore.Services.AssetBundle
                 assetRefs[asset] = (entry.bundleName, entry.count + 1);
             else
                 assetRefs[asset] = (bundle.BundleName, 1);
-
 
             if (unityEngineContract.IsDevelopmentBuild)
             {
@@ -64,11 +74,15 @@ namespace ZobieTDCore.Services.AssetBundle
             }
         }
 
-        // trả về false khi asset chưa được đăng ký để theo dõi
-        // true khi asset được hủy theo dõi thành công
+        /// <summary>
+        /// Giảm refCount assetRef. Khi count = 0, sẽ dọn dẹp khỏi hệ thống.
+        /// </summary>
+        /// <param name="asset">Asset reference đã release</param>
+        /// <returns>True nếu unregister thành công, false nếu asset chưa được đăng ký</returns>
         public bool UnregisterAssetReference(IAssetReference asset)
         {
-            if (!assetRefs.TryGetValue(asset, out var entry)) return false;
+            if (!assetRefs.TryGetValue(asset, out var entry))
+                return false;
 
             var bundleName = entry.bundleName;
             int newCount = entry.count - 1;
@@ -76,18 +90,18 @@ namespace ZobieTDCore.Services.AssetBundle
             if (newCount == 0)
                 assetRefs.Remove(asset);
             else if (newCount < 0)
-                throw new InvalidOperationException("Should never happen");
+                throw new InvalidOperationException("Invalid refCount: should never be negative");
             else
                 assetRefs[asset] = (bundleName, newCount);
 
             if (bundleTrackers.TryGetValue(bundleName, out var tracker))
             {
-                tracker.refCount = System.Math.Max(0, tracker.refCount - 1);
+                tracker.refCount = Math.Max(0, tracker.refCount - 1);
                 tracker.lastUsedTime = unityEngineContract.TimeProvider.TimeNow;
             }
             else
             {
-                throw new InvalidOperationException("Not found bundle tracker. This should never happen");
+                throw new InvalidOperationException("Tracker for bundle not found. This should never happen");
             }
 
             if (unityEngineContract.IsDevelopmentBuild)
@@ -96,44 +110,55 @@ namespace ZobieTDCore.Services.AssetBundle
                 if (debugUsageOwners.TryGetValue(asset, out var owners))
                 {
                     owners.Remove(info);
-                    if (owners.Count == 0) debugUsageOwners.Remove(asset);
+                    if (owners.Count == 0)
+                        debugUsageOwners.Remove(asset);
                 }
             }
+
             return true;
         }
 
+        /// <summary>
+        /// Trả về danh sách các bundle đã không được sử dụng quá thời gian timeout.
+        /// </summary>
         public List<string> GetNeedToUnloadBundle()
         {
-            var toUnload = new List<string>();
             var now = unityEngineContract.TimeProvider.TimeNow;
+            var toUnload = new List<string>();
+
             foreach (var kvp in bundleTrackers)
             {
                 if (kvp.Value.refCount == 0 && now - kvp.Value.lastUsedTime > unloadTimeout)
                     toUnload.Add(kvp.Key);
             }
+
             return toUnload;
         }
 
+        /// <summary>
+        /// In ra danh sách các asset đang được giữ tham chiếu cùng stacktrace (chỉ dev build).
+        /// </summary>
         public void DumpUsageStatus()
         {
             if (unityEngineContract.IsDevelopmentBuild)
             {
                 foreach (var kvp in debugUsageOwners)
                 {
-                    System.Console.WriteLine($"[Usage Debug] Asset: {kvp.Key.Name} is used by:");
-                    foreach (var owner in kvp.Value) System.Console.WriteLine($"   - {owner}");
+                    Console.WriteLine($"[Usage Debug] Asset: {kvp.Key.Name} is used by:");
+                    foreach (var owner in kvp.Value)
+                        Console.WriteLine($"   - {owner}");
                 }
             }
         }
 
-        internal Dictionary<string, Tracker> __GetBundleTrackerForTest()
-        {
-            return bundleTrackers;
-        }
+        /// <summary>
+        /// Truy cập nội bộ để test bundle tracker.
+        /// </summary>
+        internal Dictionary<string, Tracker> __GetBundleTrackerForTest() => bundleTrackers;
 
-        internal Dictionary<IAssetReference, (string bundle, int count)> __GetAssetRefForTest()
-        {
-            return assetRefs;
-        }
+        /// <summary>
+        /// Truy cập nội bộ để test asset reference table.
+        /// </summary>
+        internal Dictionary<IAssetReference, (string bundle, int count)> __GetAssetRefForTest() => assetRefs;
     }
 }
