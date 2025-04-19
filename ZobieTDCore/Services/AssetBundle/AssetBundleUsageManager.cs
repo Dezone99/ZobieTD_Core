@@ -12,9 +12,7 @@ namespace ZobieTDCore.Services.AssetBundle
     /// </summary>
     internal class AssetBundleUsageManager
     {
-        public static AssetBundleUsageManager Instance { get; } = new AssetBundleUsageManager();
-
-        private class Tracker
+        internal class Tracker
         {
             public int refCount;
             public float lastUsedTime;
@@ -159,6 +157,6 @@ namespace ZobieTDCore.Services.AssetBundle
         /// <summary>
         /// Truy cập nội bộ để test asset reference table.
         /// </summary>
-        internal Dictionary<IAssetReference, (string bundle, int count)> __GetAssetRefForTest() => assetRefs;
+        internal Dictionary<IAssetReference, (string bundleName, int count)> __GetAssetRefForTest() => assetRefs;
     }
 }

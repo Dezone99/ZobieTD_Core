@@ -16,7 +16,7 @@ namespace ZobieTDCore.Services.AssetBundle
 
         private Dictionary<string, IAssetBundleReference> loadedBundles = new Dictionary<string, IAssetBundleReference>();
         private Dictionary<IAssetReference, string> assetToBundle = new Dictionary<IAssetReference, string>();
-
+        private AssetBundleUsageManager assetBundleUsageManager = new AssetBundleUsageManager();
         /// <summary>
         /// Load một asset duy nhất từ bundle, thường dùng cho sprite đơn.
         /// Trả về IAssetReference đại diện cho 1 sprite.
@@ -24,12 +24,12 @@ namespace ZobieTDCore.Services.AssetBundle
         /// <param name="bundleName">Tên bundle đã build</param>
         /// <param name="spriteName">Tên asset cụ thể</param>
         /// <returns>IAssetReference chứa 1 sprite</returns>
-        public IAssetReference LoadSingleAsset(string bundleName, string spriteName)
+        public IAssetReference LoadSingleSubAsset(string bundleName, string spriteName)
         {
             var bundle = LoadAssetBundle(bundleName);
-            var asset = bundle.LoadSingleAsset(spriteName);
+            var asset = bundle.LoadSingleSubAsset(spriteName);
             assetToBundle[asset] = bundleName;
-            AssetBundleUsageManager.Instance.RegisterAssetReference(asset, bundle);
+            assetBundleUsageManager.RegisterAssetReference(asset, bundle);
             return asset;
         }
 
@@ -39,12 +39,12 @@ namespace ZobieTDCore.Services.AssetBundle
         /// </summary>
         /// <param name="bundleName">Tên bundle đã build</param>
         /// <returns>IAssetReference chứa toàn bộ asset trong bundle</returns>
-        public IAssetReference LoadAllAsset(string bundleName)
+        public IAssetReference LoadAllSubAsset(string bundleName)
         {
             var bundle = LoadAssetBundle(bundleName);
-            var assetRef = bundle.LoadAllAssets();
+            var assetRef = bundle.LoadAllSubAssets();
             assetToBundle[assetRef] = bundleName;
-            AssetBundleUsageManager.Instance.RegisterAssetReference(assetRef, bundle);
+            assetBundleUsageManager.RegisterAssetReference(assetRef, bundle);
             return assetRef;
         }
 
@@ -56,7 +56,7 @@ namespace ZobieTDCore.Services.AssetBundle
         {
             if (assetToBundle.TryGetValue(assetRef, out var bundleName))
             {
-                AssetBundleUsageManager.Instance.UnregisterAssetReference(assetRef);
+                assetBundleUsageManager.UnregisterAssetReference(assetRef);
             }
         }
 
@@ -76,7 +76,7 @@ namespace ZobieTDCore.Services.AssetBundle
             var unityEngineContract = ContractManager.Instance.UnityEngineContract
                 ?? throw new InvalidOperationException("Core engine was not initalized");
 
-            foreach (var bundleName in AssetBundleUsageManager.Instance.GetNeedToUnloadBundle())
+            foreach (var bundleName in assetBundleUsageManager.GetNeedToUnloadBundle())
             {
                 ForceUnloadBundle(bundleName);
             }
@@ -116,5 +116,15 @@ namespace ZobieTDCore.Services.AssetBundle
                 loadedBundles.Remove(bundleName);
             }
         }
+
+
+        /// <summary>
+        /// Taọ đối tượng mới cho test.
+        /// </summary>
+        internal static AssetBundleManager __MakeBundleManagerForTest() => new AssetBundleManager();
+
+        /// <summary>
+        /// </summary>
+        internal AssetBundleUsageManager __GetBundleUsageManagerForTest() => assetBundleUsageManager;
     }
 }
