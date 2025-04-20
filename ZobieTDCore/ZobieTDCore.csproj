@@ -1,8 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
-    <Nullable>enable</Nullable>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>netstandard2.1</TargetFramework>
+		<Nullable>enable</Nullable>
+	</PropertyGroup>
+	<Target Name="PostBuildCopyToUnity" AfterTargets="Build">
+		<ItemGroup>
+			<FilesToCopy Include="$(OutputPath)\ZobieTDCore.dll" />
+			<FilesToCopy Include="$(OutputPath)\ZobieTDCore.pdb" />
+		</ItemGroup>
+
+		<Copy SourceFiles="@(FilesToCopy)"
+			  DestinationFolder="C:\Users\Hp\Perforce\admin_DESKTOP-DIUEIGL_1667port_5224\zbietd\unity\zomatd\Assets\Plugins\ZobieTDCore\"
+			  SkipUnchangedFiles="true" />
+	</Target>
 
 </Project>

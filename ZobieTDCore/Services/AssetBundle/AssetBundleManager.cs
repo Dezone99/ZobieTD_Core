@@ -24,10 +24,10 @@ namespace ZobieTDCore.Services.AssetBundle
         /// <param name="bundleName">Tên bundle đã build</param>
         /// <param name="spriteName">Tên asset cụ thể</param>
         /// <returns>IAssetReference chứa 1 sprite</returns>
-        public IAssetReference LoadSingleSubAsset(string bundleName, string spriteName)
+        public IAssetReference LoadSingleSubSpriteAsset(string bundleName, string spriteName)
         {
             var bundle = LoadAssetBundle(bundleName);
-            var asset = bundle.LoadSingleSubAsset(spriteName);
+            var asset = bundle.LoadSingleSubSpriteAsset(spriteName);
             assetToBundle[asset] = bundleName;
             assetBundleUsageManager.RegisterAssetReference(asset, bundle);
             return asset;
@@ -39,10 +39,10 @@ namespace ZobieTDCore.Services.AssetBundle
         /// </summary>
         /// <param name="bundleName">Tên bundle đã build</param>
         /// <returns>IAssetReference chứa toàn bộ asset trong bundle</returns>
-        public IAssetReference LoadAllSubAsset(string bundleName)
+        public IAssetReference LoadAllSubSpriteAsset(string bundleName)
         {
             var bundle = LoadAssetBundle(bundleName);
-            var assetRef = bundle.LoadAllSubAssets();
+            var assetRef = bundle.LoadAllSubSpriteAssets();
             assetToBundle[assetRef] = bundleName;
             assetBundleUsageManager.RegisterAssetReference(assetRef, bundle);
             return assetRef;

@@ -43,7 +43,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
         public void LoadSingleAsset_ShouldReturnCorrectAsset()
         {
             mockUnityEngineContract.MakeNewMockBundleRef = (filepath) => zombie_idle_bundleRef;
-            var asset = manager.LoadSingleSubAsset("zombie_idle", "zombie_idle_001");
+            var asset = manager.LoadSingleSubSpriteAsset("zombie_idle", "zombie_idle_001");
             Assert.That(asset.Name, Is.EqualTo("zombie_idle_001"));
 
             // Because zombie_idle_001_assetRef was cached in mock bundle reference,
@@ -55,7 +55,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
         public void LoadAllAsset_ShouldReturnAssetRef()
         {
             mockUnityEngineContract.MakeNewMockBundleRef = (filepath) => zombie_idle_bundleRef;
-            var allAssetsRef = manager.LoadAllSubAsset("zombie_idle");
+            var allAssetsRef = manager.LoadAllSubSpriteAsset("zombie_idle");
 
             // Vì là load toàn bộ sub asset trong bundle nên sẽ lấy tên của bundle
             Assert.That(allAssetsRef.Name, Is.EqualTo("zombie_idle"));
@@ -65,7 +65,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
         public void ReleaseAssetRef_ShouldRemoveUsage()
         {
             mockUnityEngineContract.MakeNewMockBundleRef = (filepath) => zombie_idle_bundleRef;
-            var asset = manager.LoadSingleSubAsset("zombie_idle", "zombie_idle_001");
+            var asset = manager.LoadSingleSubSpriteAsset("zombie_idle", "zombie_idle_001");
             manager.ReleaseAssetRef(asset);
 
             var tracker = manager.__GetBundleUsageManagerForTest().__GetAssetRefForTest();

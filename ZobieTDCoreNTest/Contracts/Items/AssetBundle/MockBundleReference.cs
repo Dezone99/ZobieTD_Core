@@ -23,11 +23,11 @@ namespace ZobieTDCoreNTest.Contracts.Items.AssetBundle
         }
 
         public bool Contain(IAssetReference asset) => assets.ContainsKey(asset.Name);
-        public IAssetReference LoadAllSubAssets()
+        public IAssetReference LoadAllSubSpriteAssets()
         {
             return new MockAssetReference(BundleName, assets);
         }
-        public IAssetReference LoadSingleSubAsset(string name)
+        public IAssetReference LoadSingleSubSpriteAsset(string name)
         {
             if (assets.ContainsKey(name))
             {
