@@ -28,21 +28,6 @@ namespace ZobieTDCoreNTest.Contracts.Items.AssetBundle
             assets.Clear();
         }
 
-        public object LoadAllSubSpriteAssets()
-        {
-            return assets.Values.ToArray();
-        }
-
-        public object LoadSingleSubSpriteAsset(string name)
-        {
-            if (assets.ContainsKey(name))
-            {
-                return assets[name];
-            }
-            throw new KeyNotFoundException($"Asset with name '{name}' not found in bundle '{BundleName}'");
-
-        }
-
         public bool Contain(object asset)
         {
             if (asset is MockUnityAsset masset)
@@ -50,6 +35,21 @@ namespace ZobieTDCoreNTest.Contracts.Items.AssetBundle
                 return assets.ContainsKey(masset.name);
             }
             throw new InvalidOperationException("Contract violationm, asset must be type of Unity Asset");
+        }
+
+        public T LoadSingleSubAsset<T>(string name) where T : class
+        {
+            if (assets.ContainsKey(name))
+            {
+                return assets[name] as T ?? throw new InvalidCastException($"Asset is not type of {typeof(T).Name}");
+            }
+            throw new KeyNotFoundException($"Asset with name '{name}' not found in bundle '{BundleName}'");
+        }
+
+        public T[] LoadAllSubAssets<T>() where T : class
+        {
+            var subassets = assets.Values.ToArray();
+            return subassets as T[] ?? throw new InvalidCastException($"Asset is not type of {typeof(T).Name}");
         }
     }
 
