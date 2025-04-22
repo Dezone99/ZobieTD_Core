@@ -7,7 +7,7 @@ using ZobieTDCore.Contracts.Items.TimeProvider;
 
 namespace ZobieTDCoreNTest.Contracts.Items.TimeProvider
 {
-    internal class MockTimeProvider : ITimeProvider
+    internal class MockTimeProvider : ITimeProviderContract
     {
         private float time;
         public float TimeNow => time;

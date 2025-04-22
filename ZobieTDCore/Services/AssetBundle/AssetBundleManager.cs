@@ -1,76 +1,126 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using ZobieTDCore.Contracts;
+using ZobieTDCore.Contracts.Items;
 using ZobieTDCore.Contracts.Items.AssetBundle;
 
 namespace ZobieTDCore.Services.AssetBundle
 {
-    /// <summary>
-    /// Quản lý quá trình load, release và mapping các asset từ asset bundle.
-    /// Mọi asset đều được đóng gói dưới dạng IAssetReference (single hoặc group).
-    /// </summary>
+
+
     public class AssetBundleManager
     {
         public static AssetBundleManager Instance { get; } = new AssetBundleManager();
+        private readonly IUnityEngineContract unityEngineContract =
+           ContractManager.Instance.UnityEngineContract ?? throw new InvalidOperationException("Core engine was not initialized");
 
-        private Dictionary<string, IAssetBundleReference> loadedBundles = new Dictionary<string, IAssetBundleReference>();
-        private Dictionary<IAssetReference, string> assetToBundle = new Dictionary<IAssetReference, string>();
+        private Dictionary<string, IAssetBundleContract> loadedBundles = new Dictionary<string, IAssetBundleContract>();
+
+        #region Sprite caching properties
+        private Dictionary<IAssetBundleContract, AssetRef[]> bundleToAllLoadedSprites = new Dictionary<IAssetBundleContract, AssetRef[]>();
+        private Dictionary<AssetRef[], IAssetBundleContract> allLoadedSpritesToBundle = new Dictionary<AssetRef[], IAssetBundleContract>();
+        private Dictionary<AssetRef, IAssetBundleContract> singleSpriteToBundle = new Dictionary<AssetRef, IAssetBundleContract>();
+        private Dictionary<(string bundleName, string spriteName), AssetRef> cachedSingleSpriteAssets = new Dictionary<(string bundleName, string spriteName), AssetRef>();
+        private HashSet<(object assetOwner, string bundleName, object assetRef)> cachedAssetOwner = new HashSet<(object assetOwner, string bundleName, object assetRef)>();
+        #endregion
+
         private AssetBundleUsageManager assetBundleUsageManager = new AssetBundleUsageManager();
-        /// <summary>
-        /// Load một asset duy nhất từ bundle, thường dùng cho sprite đơn.
-        /// Trả về IAssetReference đại diện cho 1 sprite.
-        /// </summary>
-        /// <param name="bundleName">Tên bundle đã build</param>
-        /// <param name="spriteName">Tên asset cụ thể</param>
-        /// <returns>IAssetReference chứa 1 sprite</returns>
-        public IAssetReference LoadSingleSubSpriteAsset(string bundleName, string spriteName)
-        {
-            var bundle = LoadAssetBundle(bundleName);
-            var asset = bundle.LoadSingleSubSpriteAsset(spriteName);
-            assetToBundle[asset] = bundleName;
-            assetBundleUsageManager.RegisterAssetReference(asset, bundle);
-            return asset;
-        }
 
-        /// <summary>
-        /// Load toàn bộ asset từ 1 bundle. Thường dùng để lấy animation (nhiều sprite).
-        /// Trả về IAssetReference có thể là danh sách sprite.
-        /// </summary>
-        /// <param name="bundleName">Tên bundle đã build</param>
-        /// <returns>IAssetReference chứa toàn bộ asset trong bundle</returns>
-        public IAssetReference LoadAllSubSpriteAsset(string bundleName)
+        public AssetRef LoadSingleSubSpriteAsset(object assetOwner, string bundleName, string spriteName)
         {
+            var key = (bundleName, spriteName);
             var bundle = LoadAssetBundle(bundleName);
-            var assetRef = bundle.LoadAllSubSpriteAssets();
-            assetToBundle[assetRef] = bundleName;
-            assetBundleUsageManager.RegisterAssetReference(assetRef, bundle);
-            return assetRef;
-        }
 
-        /// <summary>
-        /// Giải phóng asset reference khỏi hệ thống, giảm refCount và có thể trigger unload.
-        /// </summary>
-        /// <param name="assetRef">Asset đã được load trước đó</param>
-        public void ReleaseAssetRef(IAssetReference assetRef)
-        {
-            if (assetToBundle.TryGetValue(assetRef, out var bundleName))
+            if (!cachedSingleSpriteAssets.TryGetValue(key, out var cachedRef))
             {
-                assetBundleUsageManager.UnregisterAssetReference(assetRef);
+                var asset = bundle.LoadSingleSubSpriteAsset(spriteName);
+                cachedRef = new AssetRef(asset);
+
+                singleSpriteToBundle[cachedRef] = bundle;
+                cachedSingleSpriteAssets[key] = cachedRef;
+            }
+
+            var assetOwnerKey = MakeAssetOwnerKey(assetOwner, bundleName, cachedRef);
+            if (!cachedAssetOwner.Contains(assetOwnerKey))
+            {
+                cachedAssetOwner.Add(assetOwnerKey);
+                assetBundleUsageManager.RegisterAssetReference(cachedRef, bundle);
+            }
+            return cachedRef;
+        }
+
+        /// <summary>
+        /// Load toàn bộ asset từ 1 bundle. Trả về mảng các IAssetReference.
+        /// Mỗi asset là một sprite đơn.
+        /// </summary>
+        public AssetRef[] LoadAllSubSpriteAsset(object assetOwner, string bundleName)
+        {
+            var bundle = LoadAssetBundle(bundleName);
+
+            if (!bundleToAllLoadedSprites.TryGetValue(bundle, out var allLoadedSpritesRef))
+            {
+                object raw = bundle.LoadAllSubSpriteAssets();
+                if (raw is Array array)
+                {
+                    var rawLenght = array.Length;
+                    allLoadedSpritesRef = new AssetRef[rawLenght];
+                    var index = 0;
+                    foreach (var asset in array)
+                    {
+                        var assetRef = new AssetRef(asset);
+                        allLoadedSpritesRef[index++] = assetRef;
+                    }
+                    bundleToAllLoadedSprites[bundle] = allLoadedSpritesRef;
+                    allLoadedSpritesToBundle[allLoadedSpritesRef] = bundle;
+
+                    var assetOwnerKey = MakeAssetOwnerKey(assetOwner, bundleName, allLoadedSpritesRef);
+                    if (!cachedAssetOwner.Contains(assetOwnerKey))
+                    {
+                        cachedAssetOwner.Add(assetOwnerKey);
+                        assetBundleUsageManager.RegisterAssetReference(allLoadedSpritesRef, bundle);
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException("LoadAllSubSpriteAssets must return sprite array!");
+                }
+            }
+            return allLoadedSpritesRef;
+        }
+
+        public void ReleaseSpriteAssetRef(object assetOwner, AssetRef assetRef)
+        {
+            if (assetRef.Ref != null &&
+                singleSpriteToBundle.TryGetValue(assetRef, out var bundle))
+            {
+                var assetOwnerKey = (assetOwner, bundle.BundleName, assetRef);
+                if (cachedAssetOwner.Contains(assetOwnerKey))
+                {
+                    assetBundleUsageManager.UnregisterAssetReference(assetRef);
+                }
             }
         }
 
-        /// <summary>
-        /// Lấy tên bundle mà assetRef thuộc về (nếu đã load).
-        /// </summary>
-        public string? GetBundleNameOfSprite(IAssetReference assetRef)
+        public void ReleaseSpriteAssetRef(object assetOwner, AssetRef[] assetRef)
         {
-            return assetToBundle.TryGetValue(assetRef, out var bundleName) ? bundleName : null;
+            if (allLoadedSpritesToBundle.TryGetValue(assetRef, out var bundle))
+            {
+                var assetOwnerKey = (assetOwner, bundle.BundleName, assetRef);
+                if (cachedAssetOwner.Contains(assetOwnerKey))
+                {
+                    assetBundleUsageManager.UnregisterAssetReference(assetRef);
+                }
+            }
         }
 
-        /// <summary>
-        /// Duyệt toàn bộ các bundle đã load và tự động giải phóng bundle không còn được sử dụng.
-        /// </summary>
+
+        public string? GetBundleNameOfSprite(AssetRef assetRef)
+        {
+            return singleSpriteToBundle.TryGetValue(assetRef, out var b) ? b.BundleName : null;
+        }
+
         public void UpdateCachedAssetBundle()
         {
             var unityEngineContract = ContractManager.Instance.UnityEngineContract
@@ -87,10 +137,16 @@ namespace ZobieTDCore.Services.AssetBundle
         /// </summary>
         public List<string> GetLoadedBundles() => new List<string>(loadedBundles.Keys);
 
-        /// <summary>
-        /// Load bundle từ StreamingAssets nếu chưa có trong bộ nhớ.
-        /// </summary>
-        private IAssetBundleReference LoadAssetBundle(string bundleName)
+        private (object assetOwner, string bundleName, object assetRef) MakeAssetOwnerKey(object assetOwner, string bundleName, object assetRef)
+        {
+            if (!(assetRef is AssetRef) && !(assetRef is AssetRef[]))
+            {
+                throw new InvalidOperationException("assetRef ");
+            }
+            return (assetOwner, bundleName, assetRef);
+        }
+
+        private IAssetBundleContract LoadAssetBundle(string bundleName)
         {
             var unityEngineContract = ContractManager.Instance.UnityEngineContract
                 ?? throw new InvalidOperationException("Core engine was not initalized");
@@ -101,6 +157,7 @@ namespace ZobieTDCore.Services.AssetBundle
                 bundle = unityEngineContract.LoadAssetBundleFromFile(path);
                 loadedBundles[bundleName] = bundle;
             }
+
             return bundle;
         }
 
@@ -117,13 +174,13 @@ namespace ZobieTDCore.Services.AssetBundle
             }
         }
 
-
         /// <summary>
-        /// Taọ đối tượng mới cho test.
+        /// Tạo đối tượng mới cho test.
         /// </summary>
         internal static AssetBundleManager __MakeBundleManagerForTest() => new AssetBundleManager();
 
         /// <summary>
+        /// Trả về đối tượng quản lý ref cho test.
         /// </summary>
         internal AssetBundleUsageManager __GetBundleUsageManagerForTest() => assetBundleUsageManager;
     }

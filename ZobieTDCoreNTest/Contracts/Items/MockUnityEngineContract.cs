@@ -8,6 +8,8 @@ using ZobieTDCore.Contracts.Items.TimeProvider;
 using ZobieTDCore.Contracts.Items;
 using ZobieTDCoreNTest.Contracts.Items.TimeProvider;
 using ZobieTDCoreNTest.Contracts.Items.AssetBundle;
+using NUnit.Framework;
+using ZobieTDCoreNTest.UnityItem;
 
 namespace ZobieTDCoreNTest.Contracts.Items
 {
@@ -15,9 +17,18 @@ namespace ZobieTDCoreNTest.Contracts.Items
     {
         public string StreamingAssetPath => "";
         public bool IsDevelopmentBuild { get; set; }
-        public ITimeProvider TimeProvider { get; set; } = new MockTimeProvider();
-        public IAssetBundleReference LoadAssetBundleFromFile(string filePath)
+        public ITimeProviderContract TimeProvider { get; set; } = new MockTimeProvider();
+        public IAssetBundleContract LoadAssetBundleFromFile(string filePath)
             => MakeNewMockBundleRef?.Invoke(filePath) ?? throw new NotImplementedException();
+
+        public string GetUnityObjectName(object obj)
+        {
+            if (obj is MockUnityAsset masset)
+            {
+                return masset.name;
+            }
+            throw new InvalidOperationException("Contract violationm, asset must be type of Unity Asset");
+        }
 
         public Func<string, MockBundleReference>? MakeNewMockBundleRef;
     }
