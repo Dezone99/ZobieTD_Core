@@ -42,10 +42,10 @@ namespace ZobieTDCore.Services.AssetBundle
         /// </summary>
         /// <param name="asset">Asset reference được sử dụng</param>
         /// <param name="bundle">Bundle chứa asset</param>
-        public void RegisterAssetReference(object asset, IAssetBundleContract bundle)
+        public void RegisterAssetReference<T>(object asset, IAssetBundleContract bundle) where T : class
         {
-            ForceCheckAssetType(asset);
-            if (asset is AssetRef ar &&
+            ForceCheckAssetType<T>(asset);
+            if (asset is AssetRef<T> ar &&
                 (ar.Ref == null || unityEngineContract.IsDevelopmentBuild && !bundle.Contain(ar.Ref)))
             {
                 throw new InvalidOperationException("Asset does not belong to the given bundle!");
@@ -79,9 +79,9 @@ namespace ZobieTDCore.Services.AssetBundle
         /// </summary>
         /// <param name="asset">Asset reference đã release</param>
         /// <returns>True nếu unregister thành công, false nếu asset chưa được đăng ký</returns>
-        public bool UnregisterAssetReference(object asset)
+        public bool UnregisterAssetReference<T>(object asset) where T : class
         {
-            ForceCheckAssetType(asset);
+            ForceCheckAssetType<T>(asset);
             if (!assetRefs.TryGetValue(asset, out var entry))
                 return false;
 
@@ -154,15 +154,15 @@ namespace ZobieTDCore.Services.AssetBundle
         }
 
 
-        private bool ForceCheckAssetType(object asset)
+        private bool ForceCheckAssetType<T>(object asset) where T : class
         {
-            if (asset is AssetRef)
+            if (asset is AssetRef<T>)
             {
                 return true;
             }
             else if (asset is Array arr)
             {
-                if (arr.Length > 0 && arr.GetValue(0) is AssetRef)
+                if (arr.Length > 0 && arr.GetValue(0) is AssetRef<T>)
                 {
                     return true;
                 }
