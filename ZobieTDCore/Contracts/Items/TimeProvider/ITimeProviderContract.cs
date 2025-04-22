@@ -8,7 +8,7 @@ namespace ZobieTDCore.Contracts.Items.TimeProvider
     /// Giao diện cung cấp thời gian thực tế.
     /// Dùng để thay thế Time.realtimeSinceStartup và dễ mock trong test.
     /// </summary>
-    public interface ITimeProvider
+    public interface ITimeProviderContract
     {
         /// <summary>
         /// Thời gian hiện tại tính bằng giây (thường dùng real-time).

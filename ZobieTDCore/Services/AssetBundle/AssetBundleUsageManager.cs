@@ -29,12 +29,12 @@ namespace ZobieTDCore.Services.AssetBundle
         // Sử dụng count để đếm trong trường hợp có nhiều renderer ref đến cùng 1 asset 
         // trong 1 bundle, ta không thể remove asset đó được mà chỉ giảm count thôi
         // đến khi count bằng 0 thì ta mới chắc chắn là đang ko có ref.
-        private Dictionary<IAssetReference, (string bundleName, int count)> assetRefs = new Dictionary<IAssetReference, (string bundleName, int count)>();
+        private Dictionary<object, (string bundleName, int count)> assetRefs = new Dictionary<object, (string bundleName, int count)>();
 
         private float unloadTimeout = 60f;
 
         // Debug: theo dõi stacktrace của object đang sử dụng asset
-        private Dictionary<IAssetReference, HashSet<string>> debugUsageOwners = new Dictionary<IAssetReference, HashSet<string>>();
+        private Dictionary<object, HashSet<string>> debugUsageOwners = new Dictionary<object, HashSet<string>>();
         private string GetCallerInfo() => System.Environment.StackTrace;
 
         /// <summary>
@@ -42,9 +42,11 @@ namespace ZobieTDCore.Services.AssetBundle
         /// </summary>
         /// <param name="asset">Asset reference được sử dụng</param>
         /// <param name="bundle">Bundle chứa asset</param>
-        public void RegisterAssetReference(IAssetReference asset, IAssetBundleReference bundle)
+        public void RegisterAssetReference(object asset, IAssetBundleContract bundle)
         {
-            if (unityEngineContract.IsDevelopmentBuild && !bundle.Contain(asset))
+            ForceCheckAssetType(asset);
+            if (asset is AssetRef ar &&
+                (ar.Ref == null || unityEngineContract.IsDevelopmentBuild && !bundle.Contain(ar.Ref)))
             {
                 throw new InvalidOperationException("Asset does not belong to the given bundle!");
             }
@@ -77,8 +79,9 @@ namespace ZobieTDCore.Services.AssetBundle
         /// </summary>
         /// <param name="asset">Asset reference đã release</param>
         /// <returns>True nếu unregister thành công, false nếu asset chưa được đăng ký</returns>
-        public bool UnregisterAssetReference(IAssetReference asset)
+        public bool UnregisterAssetReference(object asset)
         {
+            ForceCheckAssetType(asset);
             if (!assetRefs.TryGetValue(asset, out var entry))
                 return false;
 
@@ -142,11 +145,29 @@ namespace ZobieTDCore.Services.AssetBundle
             {
                 foreach (var kvp in debugUsageOwners)
                 {
-                    Console.WriteLine($"[Usage Debug] Asset: {kvp.Key.Name} is used by:");
+                    var assetName = unityEngineContract.GetUnityObjectName(kvp.Key);
+                    Console.WriteLine($"[Usage Debug] Asset: {assetName} is used by:");
                     foreach (var owner in kvp.Value)
                         Console.WriteLine($"   - {owner}");
                 }
             }
+        }
+
+
+        private bool ForceCheckAssetType(object asset)
+        {
+            if (asset is AssetRef)
+            {
+                return true;
+            }
+            else if (asset is Array arr)
+            {
+                if (arr.Length > 0 && arr.GetValue(0) is AssetRef)
+                {
+                    return true;
+                }
+            }
+            throw new InvalidOperationException("Asset should be type of AssetRef or array of AssetRef");
         }
 
         /// <summary>
@@ -157,6 +178,6 @@ namespace ZobieTDCore.Services.AssetBundle
         /// <summary>
         /// Truy cập nội bộ để test asset reference table.
         /// </summary>
-        internal Dictionary<IAssetReference, (string bundleName, int count)> __GetAssetRefForTest() => assetRefs;
+        internal Dictionary<object, (string bundleName, int count)> __GetAssetRefForTest() => assetRefs;
     }
 }

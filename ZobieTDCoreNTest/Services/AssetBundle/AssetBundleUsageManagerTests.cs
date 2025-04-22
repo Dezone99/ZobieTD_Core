@@ -1,28 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using ZobieTDCore.Contracts.Items.AssetBundle;
-using ZobieTDCore.Contracts.Items.TimeProvider;
-using ZobieTDCore.Contracts.Items;
-using ZobieTDCore.Contracts;
+﻿using ZobieTDCore.Contracts;
 using ZobieTDCore.Services.AssetBundle;
 using ZobieTDCoreNTest.Contracts.Items.AssetBundle;
 using ZobieTDCoreNTest.Contracts.Items;
 using ZobieTDCoreNTest.Contracts.Items.TimeProvider;
+using ZobieTDCoreNTest.UnityItem;
 
 namespace ZobieTDCoreNTest.Services.AssetBundle
 {
     public class AssetBundleUsageManagerTests
     {
         private AssetBundleUsageManager usageManager;
-        private MockAssetReference zombie_idle_001_assetRef;
-        private MockAssetReference zombie_idle_002_assetRef;
-        private MockAssetReference zombie_run_001_assetRef;
+        private MockUnityAsset zombie_idle_001_asset;
+        private MockUnityAsset zombie_idle_002_asset;
+        private MockUnityAsset zombie_run_001_asset;
+        private MockUnityAsset unknown_asset;
+
+        private AssetRef zombie_idle_001_assetRef;
+        private AssetRef zombie_idle_002_assetRef;
+        private AssetRef zombie_run_001_assetRef;
+        private AssetRef unknown_assetRef;
+
         private MockBundleReference zombie_idle_bundleRef;
         private MockBundleReference zombie_run_bundleRef;
-        private MockAssetReference unknown_assetRef;
         private MockUnityEngineContract mockEngineContract;
         [SetUp]
         public void Setup()
@@ -39,18 +38,23 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
 
             usageManager = new AssetBundleUsageManager();
 
-            zombie_idle_001_assetRef = new MockAssetReference("zombie_idle_001");
-            zombie_idle_002_assetRef = new MockAssetReference("zombie_idle_002");
-            zombie_run_001_assetRef = new MockAssetReference("zombie_run_001");
-            unknown_assetRef = new MockAssetReference("not_exist_asset");
+            zombie_idle_001_asset = new MockUnityAsset("zombie_idle_001");
+            zombie_idle_002_asset = new MockUnityAsset("zombie_idle_002");
+            zombie_run_001_asset = new MockUnityAsset("zombie_run_001");
+            unknown_asset = new MockUnityAsset("not_exist_asset");
+
+            zombie_idle_001_assetRef = new AssetRef(zombie_idle_001_asset);
+            zombie_idle_002_assetRef = new AssetRef(zombie_idle_002_asset);
+            zombie_run_001_assetRef = new AssetRef(zombie_run_001_asset);
+            unknown_assetRef = new AssetRef(unknown_asset);
 
             zombie_idle_bundleRef = new MockBundleReference("zombie_idle", new[] {
-                zombie_idle_001_assetRef,
-                zombie_idle_002_assetRef
+                zombie_idle_001_asset,
+                zombie_idle_002_asset
             });
 
             zombie_run_bundleRef = new MockBundleReference("zombie_run", new[] {
-                zombie_run_001_assetRef
+                zombie_run_001_asset
             });
         }
 
@@ -85,17 +89,28 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
         public void RegisterAndUnregisterMultipleTimes_ShouldUnloadProperly()
         {
             var mockTime = (MockTimeProvider)ContractManager.Instance.UnityEngineContract.TimeProvider;
+            var assetRefs = usageManager.__GetAssetRefForTest();
+            var trackers = usageManager.__GetBundleTrackerForTest();
 
             usageManager.RegisterAssetReference(zombie_idle_001_assetRef, zombie_idle_bundleRef);
             usageManager.RegisterAssetReference(zombie_idle_002_assetRef, zombie_idle_bundleRef);
             usageManager.RegisterAssetReference(zombie_run_001_assetRef, zombie_run_bundleRef);
 
             usageManager.UnregisterAssetReference(zombie_idle_001_assetRef);
+            Assert.That(assetRefs.ContainsKey(zombie_idle_001_assetRef), Is.EqualTo(false));
+            Assert.That(assetRefs[zombie_idle_002_assetRef].bundleName, Is.EqualTo("zombie_idle"));
+            Assert.That(assetRefs[zombie_run_001_assetRef].bundleName, Is.EqualTo("zombie_run"));
+
             usageManager.UnregisterAssetReference(zombie_idle_002_assetRef);
             usageManager.UnregisterAssetReference(zombie_run_001_assetRef);
+            Assert.That(assetRefs.Count, Is.EqualTo(0));
+            Assert.That(trackers["zombie_idle"].refCount, Is.EqualTo(0));
+            Assert.That(trackers["zombie_run"].refCount, Is.EqualTo(0));
 
-            mockTime.Advance(65f);
             var toUnload = usageManager.GetNeedToUnloadBundle();
+            Assert.That(toUnload.Count, Is.EqualTo(0));
+            mockTime.Advance(65f);
+            toUnload = usageManager.GetNeedToUnloadBundle();
             Assert.That(toUnload, Does.Contain("zombie_idle"));
             Assert.That(toUnload, Does.Contain("zombie_run"));
         }
@@ -106,8 +121,8 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             usageManager.RegisterAssetReference(zombie_idle_001_assetRef, zombie_idle_bundleRef);
             usageManager.RegisterAssetReference(zombie_idle_002_assetRef, zombie_idle_bundleRef);
             usageManager.RegisterAssetReference(zombie_idle_001_assetRef, zombie_idle_bundleRef);
-
             var trackers = usageManager.__GetBundleTrackerForTest();
+            
             Assert.That(trackers["zombie_idle"].refCount, Is.EqualTo(3));
 
             var assetRefs = usageManager.__GetAssetRefForTest();

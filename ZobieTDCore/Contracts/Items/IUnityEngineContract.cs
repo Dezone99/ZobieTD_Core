@@ -22,8 +22,8 @@ namespace ZobieTDCore.Contracts.Items
         /// Tải một asset bundle từ file path chỉ định.
         /// </summary>
         /// <param name="filePath">Đường dẫn tuyệt đối đến file bundle</param>
-        /// <returns>IAssetBundleReference tương ứng</returns>
-        IAssetBundleReference LoadAssetBundleFromFile(string filePath);
+        /// <returns>IAssetBundleContract tương ứng</returns>
+        IAssetBundleContract LoadAssetBundleFromFile(string filePath);
 
         /// <summary>
         /// Có đang chạy ở chế độ Development (Editor hoặc build có flag).
@@ -33,6 +33,8 @@ namespace ZobieTDCore.Contracts.Items
         /// <summary>
         /// Đối tượng cung cấp thời gian hiện tại, phục vụ việc timeout, tracking.
         /// </summary>
-        ITimeProvider TimeProvider { get; }
+        ITimeProviderContract TimeProvider { get; }
+
+        string GetUnityObjectName(object obj);
     }
 }

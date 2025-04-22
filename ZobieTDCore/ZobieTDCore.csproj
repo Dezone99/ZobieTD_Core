@@ -10,9 +10,9 @@
 			<FilesToCopy Include="$(OutputPath)\ZobieTDCore.pdb" />
 		</ItemGroup>
 
-		<Copy SourceFiles="@(FilesToCopy)"
+		<!--<Copy SourceFiles="@(FilesToCopy)"
 			  DestinationFolder="C:\Users\Hp\Perforce\admin_DESKTOP-DIUEIGL_1667port_5224\zbietd\unity\zomatd\Assets\Plugins\ZobieTDCore\"
-			  SkipUnchangedFiles="true" />
+			  SkipUnchangedFiles="true" />-->
 	</Target>
 
 </Project>

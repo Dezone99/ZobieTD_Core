@@ -2,28 +2,31 @@
 using System.Collections.Generic;
 using System.IO;
 using ZobieTDCore.Contracts;
+using ZobieTDCore.Contracts.Items;
 using ZobieTDCore.Contracts.Items.AssetBundle;
 
 namespace ZobieTDCore.Services.AssetBundle
 {
-    /// <summary>
-    /// Quản lý quá trình load, release và mapping các asset từ asset bundle.
-    /// Mọi asset đều được đóng gói dưới dạng IAssetReference (single hoặc group).
-    /// </summary>
+
+
     public class AssetBundleManager
     {
         public static AssetBundleManager Instance { get; } = new AssetBundleManager();
+        private readonly IUnityEngineContract unityEngineContract =
+           ContractManager.Instance.UnityEngineContract ?? throw new InvalidOperationException("Core engine was not initialized");
 
-        private Dictionary<string, IAssetBundleReference> loadedBundles = new Dictionary<string, IAssetBundleReference>();
-        private Dictionary<IAssetReference, string> assetToBundle = new Dictionary<IAssetReference, string>();
-        private Dictionary<(string bundleName, string spriteName), IAssetReference> cachedSingleSpriteAssets = new Dictionary<(string bundleName, string spriteName), IAssetReference>();
+        private Dictionary<string, IAssetBundleContract> loadedBundles = new Dictionary<string, IAssetBundleContract>();
+
+        #region Sprite caching properties
+        private Dictionary<IAssetBundleContract, AssetRef[]> bundleToAllLoadedSprites = new Dictionary<IAssetBundleContract, AssetRef[]>();
+        private Dictionary<AssetRef[], IAssetBundleContract> allLoadedSpritesToBundle = new Dictionary<AssetRef[], IAssetBundleContract>();
+        private Dictionary<AssetRef, IAssetBundleContract> singleSpriteToBundle = new Dictionary<AssetRef, IAssetBundleContract>();
+        private Dictionary<(string bundleName, string spriteName), AssetRef> cachedSingleSpriteAssets = new Dictionary<(string bundleName, string spriteName), AssetRef>();
+        #endregion
+
         private AssetBundleUsageManager assetBundleUsageManager = new AssetBundleUsageManager();
 
-        /// <summary>
-        /// Load một asset duy nhất từ bundle, thường dùng cho sprite đơn.
-        /// Trả về IAssetReference đại diện cho 1 sprite.
-        /// </summary>
-        public IAssetReference LoadSingleSubSpriteAsset(string bundleName, string spriteName)
+        public AssetRef LoadSingleSubSpriteAsset(string bundleName, string spriteName)
         {
             var key = (bundleName, spriteName);
 
@@ -34,64 +37,83 @@ namespace ZobieTDCore.Services.AssetBundle
 
             var bundle = LoadAssetBundle(bundleName);
             var asset = bundle.LoadSingleSubSpriteAsset(spriteName);
+            var assetRef = new AssetRef(asset);
 
-            assetToBundle[asset] = bundleName;
-            assetBundleUsageManager.RegisterAssetReference(asset, bundle);
-            cachedSingleSpriteAssets[key] = asset;
+            // Start Caching
+            singleSpriteToBundle[assetRef] = bundle;
+            cachedSingleSpriteAssets[key] = assetRef;
+            // End Caching
 
-            return asset;
-        }
-
-        /// <summary>
-        /// Load toàn bộ asset từ 1 bundle. Thường dùng để lấy animation (nhiều sprite).
-        /// </summary>
-        public IAssetReference LoadAllSubSpriteAsset(string bundleName)
-        {
-            var bundle = LoadAssetBundle(bundleName);
-            var assetRef = bundle.LoadAllSubSpriteAssets();
-            assetToBundle[assetRef] = bundleName;
             assetBundleUsageManager.RegisterAssetReference(assetRef, bundle);
             return assetRef;
         }
 
         /// <summary>
-        /// Giải phóng asset reference khỏi hệ thống, giảm refCount và có thể trigger unload.
+        /// Load toàn bộ asset từ 1 bundle. Trả về mảng các IAssetReference.
+        /// Mỗi asset là một sprite đơn.
         /// </summary>
-        public void ReleaseAssetRef(IAssetReference assetRef)
+        public AssetRef[] LoadAllSubSpriteAsset(string bundleName)
         {
-            if (assetToBundle.TryGetValue(assetRef, out var bundleName))
+            var bundle = LoadAssetBundle(bundleName);
+
+            if (bundleToAllLoadedSprites.TryGetValue(bundle, out var allLoadedSpritesRef))
             {
-                assetBundleUsageManager.UnregisterAssetReference(assetRef);
-                assetToBundle.Remove(assetRef);
+                return allLoadedSpritesRef;
+            }
 
-                // Xoá khỏi cache nếu có
-                var keysToRemove = new List<(string, string)>();
-                foreach (var kvp in cachedSingleSpriteAssets)
+            object raw = bundle.LoadAllSubSpriteAssets();
+            if (raw is Array array)
+            {
+                var rawLenght = array.Length;
+                var assetRefs = new AssetRef[rawLenght];
+                var index = 0;
+                foreach (var asset in array)
                 {
-                    if (kvp.Value == assetRef)
-                    {
-                        keysToRemove.Add(kvp.Key);
-                    }
+                    var assetRef = new AssetRef(asset);
+                    assetRefs[index++] = assetRef;
                 }
-
-                foreach (var key in keysToRemove)
-                {
-                    cachedSingleSpriteAssets.Remove(key);
-                }
+                bundleToAllLoadedSprites[bundle] = assetRefs;
+                allLoadedSpritesToBundle[assetRefs] = bundle;
+                assetBundleUsageManager.RegisterAssetReference(assetRefs, bundle);
+                return assetRefs;
+            }
+            else
+            {
+                throw new InvalidOperationException("LoadAllSubSpriteAssets must return sprite array!");
             }
         }
 
-        /// <summary>
-        /// Lấy tên bundle mà assetRef thuộc về (nếu đã load).
-        /// </summary>
-        public string? GetBundleNameOfSprite(IAssetReference assetRef)
+        public void ReleaseSpriteAssetRef(AssetRef assetRef)
         {
-            return assetToBundle.TryGetValue(assetRef, out var bundleName) ? bundleName : null;
+            if (assetRef.Ref != null &&
+                singleSpriteToBundle.TryGetValue(assetRef, out var bundle))
+            {
+                assetBundleUsageManager.UnregisterAssetReference(assetRef);
+
+                var assetName = unityEngineContract.GetUnityObjectName(assetRef.Ref);
+                var cachedSingleSpriteAssetsKey = (bundle.BundleName, assetName);
+                cachedSingleSpriteAssets.Remove(cachedSingleSpriteAssetsKey);
+                singleSpriteToBundle.Remove(assetRef);
+            }
         }
 
-        /// <summary>
-        /// Duyệt toàn bộ các bundle đã load và tự động giải phóng bundle không còn được sử dụng.
-        /// </summary>
+        public void ReleaseSpriteAssetRef(AssetRef[] assetRef)
+        {
+            if (allLoadedSpritesToBundle.TryGetValue(assetRef, out var bundle))
+            {
+                assetBundleUsageManager.UnregisterAssetReference(assetRef);
+
+                bundleToAllLoadedSprites.Remove(bundle);
+                allLoadedSpritesToBundle.Remove(assetRef);
+            }
+        }
+
+
+        public string? GetBundleNameOfSprite(AssetRef assetRef)
+        {
+            return singleSpriteToBundle.TryGetValue(assetRef, out var b) ? b.BundleName : null;
+        }
+
         public void UpdateCachedAssetBundle()
         {
             var unityEngineContract = ContractManager.Instance.UnityEngineContract
@@ -108,10 +130,7 @@ namespace ZobieTDCore.Services.AssetBundle
         /// </summary>
         public List<string> GetLoadedBundles() => new List<string>(loadedBundles.Keys);
 
-        /// <summary>
-        /// Load bundle từ StreamingAssets nếu chưa có trong bộ nhớ.
-        /// </summary>
-        private IAssetBundleReference LoadAssetBundle(string bundleName)
+        private IAssetBundleContract LoadAssetBundle(string bundleName)
         {
             var unityEngineContract = ContractManager.Instance.UnityEngineContract
                 ?? throw new InvalidOperationException("Core engine was not initalized");
