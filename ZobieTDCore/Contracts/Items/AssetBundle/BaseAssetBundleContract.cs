@@ -32,9 +32,9 @@ namespace ZobieTDCore.Contracts.Items.AssetBundle
         }
         public abstract string BundleName { get; }
         public abstract bool Contain(object asset);
-        public abstract T[] LoadAllSubAssets<T>() where T : class;
-        public abstract T LoadSingleSubAsset<T>(string name) where T : class;
         public abstract void ReloadBundle();
         protected abstract void UnloadInternal(bool unloadAllAsset);
+        public abstract object LoadSingleSubAsset(string name);
+        public abstract object[] LoadAllSubAssets();
     }
 }

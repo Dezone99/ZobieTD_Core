@@ -51,11 +51,11 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             zombie_idle_bundleRef = new MockBundleReference("zombie_idle", new[] {
                 zombie_idle_001_asset,
                 zombie_idle_002_asset
-            });
+            }, "");
 
             zombie_run_bundleRef = new MockBundleReference("zombie_run", new[] {
                 zombie_run_001_asset
-            });
+            }, "");
         }
 
         [Test]
@@ -122,7 +122,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             usageManager.RegisterAssetReference<MockUnityAsset>(zombie_idle_002_assetRef, zombie_idle_bundleRef);
             usageManager.RegisterAssetReference<MockUnityAsset>(zombie_idle_001_assetRef, zombie_idle_bundleRef);
             var trackers = usageManager.__GetBundleTrackerForTest();
-            
+
             Assert.That(trackers["zombie_idle"].refCount, Is.EqualTo(3));
 
             var assetRefs = usageManager.__GetAssetRefForTest();

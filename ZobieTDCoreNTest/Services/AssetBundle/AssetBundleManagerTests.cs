@@ -19,13 +19,14 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             zombie_idle_001_assetRef = new MockUnityAsset("zombie_idle_001");
             zombie_idle_002_assetRef = new MockUnityAsset("zombie_idle_002");
 
-            zombie_idle_bundleRef = new MockBundleReference("zombie_idle", new[]
+            mockUnityEngineContract = new MockUnityEngineContract();
+            var bundleName = "zombie_idle";
+            var path = Path.Combine(mockUnityEngineContract.StreamingAssetPath, bundleName);
+            zombie_idle_bundleRef = new MockBundleReference(bundleName, new[]
             {
                 zombie_idle_001_assetRef,
                 zombie_idle_002_assetRef
-            });
-
-            mockUnityEngineContract = new MockUnityEngineContract();
+            }, path);
             ContractManager.Instance.SetUnityEngineContract(mockUnityEngineContract);
             manager = new AssetBundleManager<MockUnityAsset>();
         }
@@ -34,7 +35,11 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
         [Test]
         public void LoadSingleAsset_ShouldReturnCorrectAsset()
         {
-            mockUnityEngineContract.MakeNewMockBundleRef = (filepath) => zombie_idle_bundleRef;
+            mockUnityEngineContract.MakeNewMockBundleRef = (filepath) =>
+            {
+                Assert.AreEqual(filepath, Path.Combine(mockUnityEngineContract.StreamingAssetPath, zombie_idle_bundleRef.BundleName));
+                return zombie_idle_bundleRef;
+            };
             var owner = new MockAssetOwner();
             var assetRef = manager.LoadSingleSubSpriteAsset(owner, "zombie_idle", "zombie_idle_001");
             var asset = assetRef.Ref as MockUnityAsset;
@@ -46,7 +51,11 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
         [Test]
         public void LoadAllAsset_ShouldReturnAssetRef()
         {
-            mockUnityEngineContract.MakeNewMockBundleRef = (filepath) => zombie_idle_bundleRef;
+            mockUnityEngineContract.MakeNewMockBundleRef = (filepath) =>
+            {
+                Assert.AreEqual(filepath, Path.Combine(mockUnityEngineContract.StreamingAssetPath, zombie_idle_bundleRef.BundleName));
+                return zombie_idle_bundleRef;
+            };
             var owner = new MockAssetOwner();
             var allAssetsRef = manager.LoadAllSubSpriteAsset(owner, "zombie_idle");
             Assert.IsNotNull(allAssetsRef);
@@ -58,7 +67,11 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
         [Test]
         public void ReleaseAssetRef_ShouldRemoveUsage()
         {
-            mockUnityEngineContract.MakeNewMockBundleRef = (filepath) => zombie_idle_bundleRef;
+            mockUnityEngineContract.MakeNewMockBundleRef = (filepath) =>
+            {
+                Assert.AreEqual(filepath, Path.Combine(mockUnityEngineContract.StreamingAssetPath, zombie_idle_bundleRef.BundleName));
+                return zombie_idle_bundleRef;
+            };
             var owner = new MockAssetOwner();
             var asset = manager.LoadSingleSubSpriteAsset(owner, "zombie_idle", "zombie_idle_001");
             var tracker = manager.__GetBundleUsageManagerForTest().__GetAssetRefForTest();
@@ -72,7 +85,11 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
         [Test]
         public void MultipleOwnerCallToLoadAsset()
         {
-            mockUnityEngineContract.MakeNewMockBundleRef = (filepath) => zombie_idle_bundleRef;
+            mockUnityEngineContract.MakeNewMockBundleRef = (filepath) =>
+            {
+                Assert.AreEqual(filepath, Path.Combine(mockUnityEngineContract.StreamingAssetPath, zombie_idle_bundleRef.BundleName));
+                return zombie_idle_bundleRef;
+            };
             var tracker = manager.__GetBundleUsageManagerForTest().__GetAssetRefForTest();
             var owner = new MockAssetOwner();
             var owner2 = new MockAssetOwner();

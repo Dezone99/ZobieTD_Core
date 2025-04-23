@@ -25,13 +25,13 @@ namespace ZobieTDCore.Contracts.Items.AssetBundle
         /// <summary>
         /// Load một asset duy nhất từ bundle (thường là sprite).
         /// </summary>
-        T LoadSingleSubAsset<T>(string name) where T : class;
+        object LoadSingleSubAsset(string name);
 
         /// <summary>
         /// Load toàn bộ asset trong bundle, dùng cho animation, group.
         /// </summary>
-        T[] LoadAllSubAssets<T>() where T: class;
-        
+        object[] LoadAllSubAssets();
+
         /// <summary>
         /// Kiểm tra asset này có thuộc bundle hay không (dùng cho dev/debug).
         /// </summary>

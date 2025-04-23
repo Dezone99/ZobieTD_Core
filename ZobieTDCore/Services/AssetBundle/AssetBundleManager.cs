@@ -44,11 +44,10 @@ namespace ZobieTDCore.Services.AssetBundle
                     bundle.ReloadBundle();
                 }
 
-                var asset = bundle.LoadSingleSubAsset<T>(spriteName);
-                if (asset == null)
-                    throw new InvalidOperationException($"Failed to load asset with type {typeof(T).Name}");
-
-                cachedRef = new AssetRef<T>(asset);
+                var asset = bundle.LoadSingleSubAsset(spriteName);
+                if (!(asset is T typedAsset))
+                    throw new InvalidCastException($"Asset is not of type {typeof(T).Name}");
+                cachedRef = new AssetRef<T>(typedAsset);
 
                 singleSpriteToBundle[cachedRef] = bundle;
                 cachedSingleSpriteAssets[key] = cachedRef;
@@ -78,7 +77,7 @@ namespace ZobieTDCore.Services.AssetBundle
                     bundle.ReloadBundle();
                 }
 
-                var assets = bundle.LoadAllSubAssets<T>();
+                var assets = bundle.LoadAllSubAssets();
                 if (assets == null)
                     throw new InvalidOperationException($"Failed to load all sub assets with type {typeof(T).Name}");
 
