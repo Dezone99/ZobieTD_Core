@@ -1,15 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using ZobieTDCore.Contracts.Items.AssetBundle;
-using ZobieTDCore.Contracts.Items;
-using ZobieTDCore.Services.AssetBundle;
+﻿using ZobieTDCore.Services.AssetBundle;
 using ZobieTDCore.Contracts;
-using ZobieTDCore.Contracts.Items.TimeProvider;
-using System.Reflection;
-using System.Diagnostics.Contracts;
 using ZobieTDCoreNTest.Contracts.Items.AssetBundle;
 using ZobieTDCoreNTest.Contracts.Items;
 using ZobieTDCoreNTest.UnityItem;
@@ -18,7 +8,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
 {
     public class AssetBundleManagerTests
     {
-        private AssetBundleManager manager;
+        private AssetBundleManager<MockUnityAsset> manager;
         private MockUnityAsset zombie_idle_001_assetRef;
         private MockUnityAsset zombie_idle_002_assetRef;
         private MockBundleReference zombie_idle_bundleRef;
@@ -37,7 +27,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
 
             mockUnityEngineContract = new MockUnityEngineContract();
             ContractManager.Instance.SetUnityEngineContract(mockUnityEngineContract);
-            manager = AssetBundleManager.__MakeBundleManagerForTest();
+            manager = new AssetBundleManager<MockUnityAsset>();
         }
 
 
