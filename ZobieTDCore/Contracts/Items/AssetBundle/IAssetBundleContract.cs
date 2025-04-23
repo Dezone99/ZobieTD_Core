@@ -36,5 +36,9 @@ namespace ZobieTDCore.Contracts.Items.AssetBundle
         /// Kiểm tra asset này có thuộc bundle hay không (dùng cho dev/debug).
         /// </summary>
         bool Contain(object asset);
+
+        bool IsUnloaded();
+
+        void ReloadBundle();
     }
 }
