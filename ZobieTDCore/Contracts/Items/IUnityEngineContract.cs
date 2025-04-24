@@ -13,6 +13,8 @@ namespace ZobieTDCore.Contracts.Items
     /// </summary>
     public interface IUnityEngineContract
     {
+        string PersistentDataPath { get; }
+
         /// <summary>
         /// Đường dẫn đến thư mục StreamingAssets.
         /// </summary>
@@ -36,5 +38,7 @@ namespace ZobieTDCore.Contracts.Items
         ITimeProviderContract TimeProvider { get; }
 
         string GetUnityObjectName(object obj);
+
+        void LogToConsole(string log);
     }
 }
