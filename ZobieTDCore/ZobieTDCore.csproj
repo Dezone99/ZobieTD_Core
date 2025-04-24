@@ -14,5 +14,8 @@
 			  DestinationFolder="C:\Users\Hp\Perforce\admin_DESKTOP-DIUEIGL_1667port_5224\zbietd\unity\zomatd\Assets\Plugins\ZobieTDCore\"
 			  SkipUnchangedFiles="true" />
 	</Target>
+	<ItemGroup>
+	  <PackageReference Include="MoonSharp" Version="2.0.0" />
+	</ItemGroup>
 
 </Project>
