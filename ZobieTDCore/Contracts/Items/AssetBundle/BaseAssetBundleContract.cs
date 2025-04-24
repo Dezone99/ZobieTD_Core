@@ -8,7 +8,7 @@ namespace ZobieTDCore.Contracts.Items.AssetBundle
     {
         private bool isUnloaded = false;
         private bool isSoftUnloaded = false;
-        private string bundlePath;
+        protected string bundlePath;
         public BaseAssetBundleContract(string bundlePath)
         {
             this.bundlePath = bundlePath;
