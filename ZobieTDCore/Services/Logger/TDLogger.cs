@@ -13,7 +13,7 @@ using ZobieTDCore.Contracts;
 
 namespace ZobieTDCore.Services.Logger
 {
-    public class Logger
+    public class TDLogger
     {
         private const string PROJECT_TAG = "GameLogger";
         private static readonly IUnityEngineContract unityEngineContract =
@@ -27,7 +27,7 @@ namespace ZobieTDCore.Services.Logger
         private static readonly string LogFolder;
         private static bool isInitialized = false;
 
-        static Logger()
+        static TDLogger()
         {
             LogFolder = Path.Combine(unityEngineContract.PersistentDataPath, "logs");
             if (!Directory.Exists(LogFolder))
@@ -49,7 +49,7 @@ namespace ZobieTDCore.Services.Logger
             isInitialized = true;
         }
 
-        public Logger(string tag)
+        public TDLogger(string tag)
         {
             classTag = tag;
         }
