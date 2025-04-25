@@ -27,7 +27,7 @@ namespace ZobieTDCore.Services.Logger
         private static string LogFolder;
         private static bool isInitialized = false;
 
-        public static void Init()
+        internal static void Init()
         {
             LogFolder = Path.Combine(unityEngineContract.PersistentDataPath, "logs");
             if (!Directory.Exists(LogFolder))
