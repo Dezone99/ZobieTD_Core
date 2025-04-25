@@ -24,10 +24,10 @@ namespace ZobieTDCore.Services.Logger
         private string classTag;
         private static readonly BlockingCollection<string> LogQueue = new BlockingCollection<string>(new ConcurrentQueue<string>());
         private static readonly CancellationTokenSource Cts = new CancellationTokenSource();
-        private static readonly string LogFolder;
+        private static string LogFolder;
         private static bool isInitialized = false;
 
-        static TDLogger()
+        public static void Init()
         {
             LogFolder = Path.Combine(unityEngineContract.PersistentDataPath, "logs");
             if (!Directory.Exists(LogFolder))
