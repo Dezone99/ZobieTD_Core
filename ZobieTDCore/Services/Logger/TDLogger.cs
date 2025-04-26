@@ -16,9 +16,6 @@ namespace ZobieTDCore.Services.Logger
     public class TDLogger
     {
         private const string PROJECT_TAG = "GameLogger";
-        private static readonly IUnityEngineContract unityEngineContract =
-            ContractManager.Instance.UnityEngineContract ?? throw new InvalidOperationException("Core engine was not initialized");
-
         private static StreamWriter LogWriter;
         private static FileStream _logFs;
         private string classTag;
@@ -26,9 +23,11 @@ namespace ZobieTDCore.Services.Logger
         private static readonly CancellationTokenSource Cts = new CancellationTokenSource();
         private static string LogFolder;
         private static bool isInitialized = false;
+        private static IUnityEngineContract unityEngineContract;
 
-        internal static void Init()
+        internal static void Init(IUnityEngineContract unityEngineContract)
         {
+            TDLogger.unityEngineContract = unityEngineContract;
             LogFolder = Path.Combine(unityEngineContract.PersistentDataPath, "logs");
             if (!Directory.Exists(LogFolder))
             {
