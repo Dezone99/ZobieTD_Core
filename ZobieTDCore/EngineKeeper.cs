@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using ZobieTDCore.Contracts;
 using ZobieTDCore.Contracts.Items;
+using ZobieTDCore.Services.Logger;
 
 namespace ZobieTDCore
 {
@@ -11,6 +12,7 @@ namespace ZobieTDCore
         public static void Init(IUnityEngineContract unityEngineContract)
         {
             ContractManager.Instance.SetUnityEngineContract(unityEngineContract);
+            TDLogger.Init();
         }
     }
 }
