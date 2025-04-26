@@ -12,7 +12,7 @@ namespace ZobieTDCore
         public static void Init(IUnityEngineContract unityEngineContract)
         {
             ContractManager.Instance.SetUnityEngineContract(unityEngineContract);
-            TDLogger.Init();
+            TDLogger.Init(unityEngineContract);
         }
     }
 }

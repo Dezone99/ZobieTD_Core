@@ -3,6 +3,7 @@ using ZobieTDCore.Contracts;
 using ZobieTDCoreNTest.Contracts.Items.AssetBundle;
 using ZobieTDCoreNTest.Contracts.Items;
 using ZobieTDCoreNTest.UnityItem;
+using ZobieTDCore.Services.Logger;
 
 namespace ZobieTDCoreNTest.Services.AssetBundle
 {
@@ -28,6 +29,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
                 zombie_idle_002_assetRef
             }, path);
             ContractManager.Instance.SetUnityEngineContract(mockUnityEngineContract);
+            TDLogger.Init(mockUnityEngineContract);
             manager = new AssetBundleManager<MockUnityAsset>();
         }
 
@@ -57,7 +59,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
                 return zombie_idle_bundleRef;
             };
             var owner = new MockAssetOwner();
-            var allAssetsRef = manager.LoadAllSubSpriteAsset(owner, "zombie_idle");
+            var allAssetsRef = manager.LoadAnimationSpriteAsset(owner, "zombie_idle");
             Assert.IsNotNull(allAssetsRef);
             Assert.That(allAssetsRef.Length, Is.EqualTo(2));
             Assert.That(allAssetsRef[0].Ref, Is.EqualTo(zombie_idle_001_assetRef));
@@ -65,7 +67,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
         }
 
         [Test]
-        public void ReleaseAssetRef_ShouldRemoveUsage()
+        public void ReleaseSpriteAssetRef_ShouldRemoveUsage()
         {
             mockUnityEngineContract.MakeNewMockBundleRef = (filepath) =>
             {
@@ -79,6 +81,43 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.That(tracker.ContainsKey(asset), Is.True);
             manager.ReleaseSpriteAssetRef(owner, asset);
             Assert.That(tracker.ContainsKey(asset), Is.False);
+        }
+
+        [Test]
+        public void ReleaseAnimationAssetRef_ShouldRemoveUsageAndCache()
+        {
+            // Arrange
+            mockUnityEngineContract.MakeNewMockBundleRef = (filepath) =>
+            {
+                Assert.AreEqual(filepath, Path.Combine(mockUnityEngineContract.StreamingAssetPath, zombie_idle_bundleRef.BundleName));
+                return zombie_idle_bundleRef;
+            };
+
+            var owner = new MockAssetOwner();
+            var assets = manager.LoadAnimationSpriteAsset(owner, "zombie_idle");
+
+            var bundleUsageManager = manager.__GetBundleUsageManagerForTest();
+            var animationToBundleMap = manager.__GetAnimationBundleMap();
+            var assetTracker = bundleUsageManager.__GetAssetRefForTest();
+            var bundleTracker = bundleUsageManager.__GetBundleTrackerForTest();
+
+            var loadedBundles = manager.GetLoadedBundles();
+
+            // Assert pre-condition
+            Assert.That(assetTracker.Count, Is.GreaterThan(0), "Should have assets tracked before release.");
+            Assert.That(bundleTracker.Count, Is.GreaterThan(0), "Should have bundle tracked before release.");
+            Assert.That(loadedBundles, Does.Contain("zombie_idle"), "Bundle zombie_idle should be loaded before release.");
+            Assert.That(animationToBundleMap.ContainsKey(assets), Is.True, "Animation is cached before release.");
+            // Act
+            manager.ReleaseAnimationAssetRef(owner, assets);
+
+            Assert.That(manager.GetLoadedBundles(), Does.Not.Contain("zombie_idle"), "Bundle zombie_idle should have been unloaded from manager.");
+            Assert.That(animationToBundleMap.ContainsKey(assets), Is.False, "Animation is cached before release.");
+            Assert.That(assetTracker.ContainsKey(assets), Is.False, $"Animation ssset should have been untracked.");
+            foreach (var asset in assets)
+            {
+                Assert.That(assetTracker.ContainsKey(asset), Is.False, $"Asset {mockUnityEngineContract.GetUnityObjectName(asset.Ref)} should have been untracked.");
+            }
         }
 
 

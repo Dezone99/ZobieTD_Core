@@ -18,6 +18,9 @@ namespace ZobieTDCoreNTest.Contracts.Items
         public string StreamingAssetPath => "";
         public bool IsDevelopmentBuild { get; set; }
         public ITimeProviderContract TimeProvider { get; set; } = new MockTimeProvider();
+
+        public string PersistentDataPath => "";
+
         public IAssetBundleContract LoadAssetBundleFromFile(string filePath)
             => MakeNewMockBundleRef?.Invoke(filePath) ?? throw new NotImplementedException();
 
@@ -28,6 +31,11 @@ namespace ZobieTDCoreNTest.Contracts.Items
                 return masset.name;
             }
             throw new InvalidOperationException("Contract violationm, asset must be type of Unity Asset");
+        }
+
+        public void LogToConsole(string log)
+        {
+            Console.WriteLine(log);
         }
 
         public Func<string, MockBundleReference>? MakeNewMockBundleRef;
