@@ -21,8 +21,8 @@ namespace ZobieTDCoreNTest.Contracts.Items
 
         public string PersistentDataPath => "";
 
-        public IAssetBundleContract LoadAssetBundleFromFile(string filePath)
-            => MakeNewMockBundleRef?.Invoke(filePath) ?? throw new NotImplementedException();
+        public IAssetBundleContract LoadAssetBundleFromFile(string fullPath, string bundlePath)
+            => MakeNewMockBundleRef?.Invoke(fullPath) ?? throw new NotImplementedException();
 
         public string GetUnityObjectName(object obj)
         {

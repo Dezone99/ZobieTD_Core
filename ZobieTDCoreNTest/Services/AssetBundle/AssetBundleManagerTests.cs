@@ -27,7 +27,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             {
                 zombie_idle_001_assetRef,
                 zombie_idle_002_assetRef
-            }, path);
+            }, path, bundleName);
             ContractManager.Instance.SetUnityEngineContract(mockUnityEngineContract);
             TDLogger.Init(mockUnityEngineContract);
             manager = new AssetBundleManager<MockUnityAsset>();
@@ -109,14 +109,15 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.That(loadedBundles, Does.Contain("zombie_idle"), "Bundle zombie_idle should be loaded before release.");
             Assert.That(animationToBundleMap.ContainsKey(assets), Is.True, "Animation is cached before release.");
             // Act
-            manager.ReleaseAnimationAssetRef(owner, assets);
+            manager.ReleaseAnimationAssetRef(owner, assets, forceCleanUpIfNoRefCount: true);
 
             Assert.That(manager.GetLoadedBundles(), Does.Not.Contain("zombie_idle"), "Bundle zombie_idle should have been unloaded from manager.");
             Assert.That(animationToBundleMap.ContainsKey(assets), Is.False, "Animation is cached before release.");
             Assert.That(assetTracker.ContainsKey(assets), Is.False, $"Animation ssset should have been untracked.");
             foreach (var asset in assets)
             {
-                Assert.That(assetTracker.ContainsKey(asset), Is.False, $"Asset {mockUnityEngineContract.GetUnityObjectName(asset.Ref)} should have been untracked.");
+                Assert.That(asset.Ref == null, Is.True, $"Ref have been untracked.");
+                Assert.That(assetTracker.ContainsKey(asset), Is.False, $"Asset should have been untracked.");
             }
         }
 

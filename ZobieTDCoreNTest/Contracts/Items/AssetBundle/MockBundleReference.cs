@@ -15,7 +15,8 @@ namespace ZobieTDCoreNTest.Contracts.Items.AssetBundle
 
         public override string BundleName { get; }
 
-        public MockBundleReference(string name, IEnumerable<MockUnityAsset> refs, string bundlePath) : base(bundlePath)
+        public MockBundleReference(string name, IEnumerable<MockUnityAsset> refs
+            , string fullBundlePath, string bundlePath) : base(fullBundlePath, bundlePath)
         {
             this.refs = refs;
             BundleName = name;

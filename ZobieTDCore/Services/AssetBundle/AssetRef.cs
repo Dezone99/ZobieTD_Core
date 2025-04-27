@@ -5,9 +5,9 @@ using System.Text;
 
 namespace ZobieTDCore.Services.AssetBundle
 {
-    public class AssetRef<T> where T : class
+    public class AssetRef<T> : IDisposable where T : class
     {
-        public T? Ref { get; }
+        public T? Ref { get; private set; }
         public AssetRef(T @ref)
         {
             Ref = @ref;
@@ -25,6 +25,11 @@ namespace ZobieTDCore.Services.AssetBundle
         public override int GetHashCode()
         {
             return Ref?.GetHashCode() ?? base.GetHashCode();
+        }
+
+        public void Dispose()
+        {
+            Ref = null;
         }
     }
 }

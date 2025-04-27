@@ -51,11 +51,11 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             zombie_idle_bundleRef = new MockBundleReference("zombie_idle", new[] {
                 zombie_idle_001_asset,
                 zombie_idle_002_asset
-            }, "");
+            }, "", "");
 
             zombie_run_bundleRef = new MockBundleReference("zombie_run", new[] {
                 zombie_run_001_asset
-            }, "");
+            }, "", "");
         }
 
         [Test]

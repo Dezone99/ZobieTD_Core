@@ -22,6 +22,8 @@ namespace ZobieTDCore.Contracts.Items.AssetBundle
         /// </summary>
         string BundleName { get; }
 
+        string BundlePath { get; }
+
         /// <summary>
         /// Load một asset duy nhất từ bundle (thường là sprite).
         /// </summary>

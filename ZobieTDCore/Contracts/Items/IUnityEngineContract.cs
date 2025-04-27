@@ -23,9 +23,9 @@ namespace ZobieTDCore.Contracts.Items
         /// <summary>
         /// Tải một asset bundle từ file path chỉ định.
         /// </summary>
-        /// <param name="filePath">Đường dẫn tuyệt đối đến file bundle</param>
+        /// <param name="fullBundlePath">Đường dẫn tuyệt đối đến file bundle</param>
         /// <returns>IAssetBundleContract tương ứng</returns>
-        IAssetBundleContract LoadAssetBundleFromFile(string filePath);
+        IAssetBundleContract LoadAssetBundleFromFile(string fullBundlePath, string bundlePath);
 
         /// <summary>
         /// Có đang chạy ở chế độ Development (Editor hoặc build có flag).

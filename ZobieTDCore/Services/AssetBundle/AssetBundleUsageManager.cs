@@ -78,22 +78,21 @@ namespace ZobieTDCore.Services.AssetBundle
         /// Giảm refCount assetRef. Khi count = 0, sẽ dọn dẹp khỏi hệ thống.
         /// </summary>
         /// <param name="asset">Asset reference đã release</param>
-        /// <returns>True nếu unregister thành công, false nếu asset chưa được đăng ký</returns>
-        public bool UnregisterAssetReference<T>(object asset) where T : class
+        public (bool success, int bundleRefCount, int assetRefCount) UnregisterAssetReference<T>(object asset) where T : class
         {
             ForceCheckAssetType<T>(asset);
             if (!assetRefs.TryGetValue(asset, out var entry))
-                return false;
+                return (false, -1, -1);
 
             var bundleName = entry.bundleName;
-            int newCount = entry.count - 1;
+            int newAssetRefCount = entry.count - 1;
 
-            if (newCount == 0)
+            if (newAssetRefCount == 0)
                 assetRefs.Remove(asset);
-            else if (newCount < 0)
+            else if (newAssetRefCount < 0)
                 throw new InvalidOperationException("Invalid refCount: should never be negative");
             else
-                assetRefs[asset] = (bundleName, newCount);
+                assetRefs[asset] = (bundleName, newAssetRefCount);
 
             if (bundleTrackers.TryGetValue(bundleName, out var tracker))
             {
@@ -107,16 +106,14 @@ namespace ZobieTDCore.Services.AssetBundle
 
             if (unityEngineContract.IsDevelopmentBuild)
             {
-                var info = GetCallerInfo();
                 if (debugUsageOwners.TryGetValue(asset, out var owners))
                 {
-                    owners.Remove(info);
-                    if (owners.Count == 0)
+                    if (newAssetRefCount == 0)
                         debugUsageOwners.Remove(asset);
                 }
             }
 
-            return true;
+            return (true, tracker.refCount, newAssetRefCount);
         }
 
         /// <summary>
