@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data.SqlTypes;
 using System.Text;
+using System.Xml.Linq;
 
 namespace ZobieTDCore.Services.AssetBundle
 {
@@ -31,5 +32,25 @@ namespace ZobieTDCore.Services.AssetBundle
         {
             Ref = null;
         }
+
+        //public static bool operator ==(AssetRef<T>? a, AssetRef<T>? b)
+        //{
+        //    if (ReferenceEquals(a, null))
+        //        return ReferenceEquals(b, null);
+
+        //    if (ReferenceEquals(b, null))
+        //        return a.Ref == null;
+
+        //    if (a.Ref == null || b.Ref == null)
+        //        return Object.Equals(a.Ref, b.Ref);
+
+        //    return Object.Equals(a, b);
+        //}
+
+        //public static bool operator !=(AssetRef<T>? a, AssetRef<T>? b)
+        //{
+        //    return !(a == b);
+        //}
+
     }
 }

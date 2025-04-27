@@ -251,6 +251,13 @@ namespace ZobieTDCore.Services.AssetBundle
         /// Truy cập instance AssetBundleUsageManager cho unit test.
         /// </summary>
         internal AssetBundleUsageManager __GetBundleUsageManagerForTest() => assetBundleUsageManager;
+
+
+        internal Dictionary<string, IAssetBundleContract> __GetLoadedBundles() => loadedBundles;
+        internal HashSet<(object assetOwner, string bundlePath, object assetRef)> __GetCachedAssetOwner() => cachedAssetOwner;
+        internal Dictionary<AssetRef<T>, IAssetBundleContract> __GetSingleSpriteToBundle() => singleSpriteToBundle;
+        internal Dictionary<(string bundlePath, string spriteName), AssetRef<T>> __GetCachedSingleSpriteAssets() => cachedSingleSpriteAssets;
         internal Dictionary<AssetRef<T>[], IAssetBundleContract> __GetAnimationBundleMap() => animationToBundle;
+        internal Dictionary<IAssetBundleContract, AssetRef<T>[]> __GetBundleToAllLoadedSprites() => bundleToAllLoadedSprites;
     }
 }
