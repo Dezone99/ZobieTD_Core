@@ -500,12 +500,10 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             // Giải phóng asset animation
             manager.ReleaseAnimationAssetRef(owner, animSprites, forceCleanUpIfNoRefCount: true);
             // Chỉ giải phóng ref của animation asset ref
-            // vì ko thể giả lập lại behavior tương tự như unity engine khi giải phóng bộ nhớ,
-            // nên tạm comment tránh lỗi 
-            //foreach (var animSprite in animSprites)
-            //{
-            //    Assert.IsTrue(animSprite.Ref == null); 
-            //}
+            foreach (var animSprite in animSprites)
+            {
+                Assert.IsTrue(animSprite.Ref == null);
+            }
 
             // Không giải phóng asset ref của single spr
             Assert.IsTrue(sprite.Ref != null);
@@ -521,8 +519,6 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.IsTrue(bundleToSingleSpr[zombie_idle_bundleRef].Count == 2);
             Assert.IsTrue(bundleToSingleSpr[zombie_idle_bundleRef].ContainsKey(mockSprName1));
             Assert.IsTrue(bundleToSingleSpr[zombie_idle_bundleRef].ContainsKey(mockSprName2));
-
-
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
             {
