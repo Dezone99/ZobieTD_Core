@@ -7,7 +7,7 @@ namespace ZobieTDCore.Contracts.Items.AssetBundle
     public abstract class BaseAssetBundleContract : IAssetBundleContract
     {
         private bool isUnloaded = false;
-        private bool isSoftUnloaded = false;
+        protected bool isSoftUnloaded { get; private set; } = false;
         protected string fullBundlePath;
         protected string bundlePath;
         public BaseAssetBundleContract(string fullBundlePath, string bundlePath)
@@ -20,7 +20,12 @@ namespace ZobieTDCore.Contracts.Items.AssetBundle
         {
             return isUnloaded;
         }
-
+        public void ReloadBundle()
+        {
+            isUnloaded = false;
+            isSoftUnloaded = false;
+            ReloadBundleInternal();
+        }
         public void Unload(bool unloadAllAsset)
         {
             if (isUnloaded)
@@ -37,9 +42,11 @@ namespace ZobieTDCore.Contracts.Items.AssetBundle
         public string BundlePath => bundlePath;
 
         public abstract bool Contain(object asset);
-        public abstract void ReloadBundle();
+        public abstract void ReloadBundleInternal();
+
         protected abstract void UnloadInternal(bool unloadAllAsset);
         public abstract object LoadSingleSubAsset(string name);
         public abstract object[] LoadAllSubAssets();
+
     }
 }

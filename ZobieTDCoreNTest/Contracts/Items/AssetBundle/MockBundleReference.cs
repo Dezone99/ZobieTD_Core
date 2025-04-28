@@ -16,6 +16,8 @@ namespace ZobieTDCoreNTest.Contracts.Items.AssetBundle
         public override string BundleName { get; }
         public string FullPath => fullBundlePath;
         public string RelativeBundlePath => bundlePath;
+        public bool IsSoftUnloaded => isSoftUnloaded;
+
         public MockBundleReference(string name, IEnumerable<MockUnityAsset> refs
             , string fullBundlePath, string bundlePath) : base(fullBundlePath, bundlePath)
         {
@@ -56,7 +58,7 @@ namespace ZobieTDCoreNTest.Contracts.Items.AssetBundle
             return assets.Values.ToArray();
         }
 
-        public override void ReloadBundle()
+        public override void ReloadBundleInternal()
         {
             assets = new Dictionary<string, MockUnityAsset>();
             foreach (var asset in refs)

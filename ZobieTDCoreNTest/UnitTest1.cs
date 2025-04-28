@@ -12,23 +12,25 @@ namespace ZobieTDCoreNTest
         }
 
         [Test]
-        public void Test1()
+        public void TestDisposeRefFromData()
         {
-            var e1 = new Data() { Id = 1, Name = "1" };
-            var e2 = new Data() { Id = 2, Name = "2" };
-            var e3 = new Data() { Id = 3, Name = "3" };
-
-            var ar1 = new AssetRef<Data>(e1);
-            var ar1_2 = new AssetRef<Data>(e1);
-            ar1.Dispose();
-            var t = ar1 == null;
-            e3 = new Data() { Id = 3, Name = "3" };
+            var @ref = new Ref() { Id = 1 };
+            var data = new Data() { Id = 1, Name = "1", Ref = @ref };
+            var data2 = new Data() { Id = 1, Name = "1", Ref = @ref };
+            @ref = null;
+            data.Ref = null;
+            Assert.IsTrue(data.Ref == null);
         }
 
+        private class Ref
+        {
+            public int Id { get; set; }
+        }
         private class Data
         {
             public int Id { get; set; }
             public string Name { get; set; }
+            public Ref? @Ref { get; set; }
         }
 
 
