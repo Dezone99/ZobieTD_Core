@@ -22,7 +22,8 @@ namespace ZobieTDCore.Services.AssetBundle
             ContractManager.Instance.UnityEngineContract ?? throw new InvalidOperationException("Core engine was not initialized");
 
         private readonly Dictionary<string, IAssetBundleContract> loadedBundles = new Dictionary<string, IAssetBundleContract>();
-        private readonly HashSet<(object assetOwner, string bundlePath, object assetRef)> cachedAssetOwner = new HashSet<(object assetOwner, string bundlePath, object assetRef)>();
+        private readonly Dictionary<IAssetBundleContract, HashSet<(object assetOwner, string bundlePath, object assetRef)>> cachedAssetOwner
+            = new Dictionary<IAssetBundleContract, HashSet<(object assetOwner, string bundlePath, object assetRef)>>();
 
         #region Sprite Caching
         private readonly Dictionary<AssetRef<T>, IAssetBundleContract> singleSpriteToBundle = new Dictionary<AssetRef<T>, IAssetBundleContract>();
@@ -42,7 +43,6 @@ namespace ZobieTDCore.Services.AssetBundle
         /// </summary>
         public AssetRef<T> LoadSingleSubSpriteAsset(object assetOwner, string bundlePath, string spriteName)
         {
-            var key = (bundlePath, spriteName);
             var bundle = LoadAssetBundle(bundlePath);
             if (!bundleToSingleSpriteAssets.ContainsKey(bundle))
             {
@@ -67,8 +67,12 @@ namespace ZobieTDCore.Services.AssetBundle
                 sprMap[spriteName] = assetRef;
             }
 
+            if (!cachedAssetOwner.ContainsKey(bundle))
+            {
+                cachedAssetOwner[bundle] = new HashSet<(object assetOwner, string bundlePath, object assetRef)>();
+            }
             var assetOwnerKey = MakeAssetOwnerKey(assetOwner, bundlePath, assetRef);
-            if (cachedAssetOwner.Add(assetOwnerKey))
+            if (cachedAssetOwner[bundle].Add(assetOwnerKey))
             {
                 assetBundleUsageManager.RegisterAssetReference<T>(assetRef, bundle);
             }
@@ -108,8 +112,12 @@ namespace ZobieTDCore.Services.AssetBundle
                 animationToBundle[allLoadedSpritesRef] = bundle;
             }
 
+            if (!cachedAssetOwner.ContainsKey(bundle))
+            {
+                cachedAssetOwner[bundle] = new HashSet<(object assetOwner, string bundlePath, object assetRef)>();
+            }
             var assetOwnerKey = MakeAssetOwnerKey(assetOwner, bundlePath, allLoadedSpritesRef);
-            if (cachedAssetOwner.Add(assetOwnerKey))
+            if (cachedAssetOwner[bundle].Add(assetOwnerKey))
             {
                 assetBundleUsageManager.RegisterAssetReference<T>(allLoadedSpritesRef, bundle);
             }
@@ -130,7 +138,7 @@ namespace ZobieTDCore.Services.AssetBundle
             if (assetRef.Ref != null && singleSpriteToBundle.TryGetValue(assetRef, out var bundle))
             {
                 var assetOwnerKey = (assetOwner, bundle.BundlePath, assetRef);
-                if (cachedAssetOwner.Remove(assetOwnerKey))
+                if (cachedAssetOwner[bundle].Remove(assetOwnerKey))
                 {
                     var assetName = unityEngineContract.GetUnityObjectName(assetRef.Ref);
                     (var sucess, var bundleRefCount, var assetRefCount) = assetBundleUsageManager.UnregisterAssetReference<T>(assetRef);
@@ -145,7 +153,7 @@ namespace ZobieTDCore.Services.AssetBundle
                             singleSpriteToBundle.Remove(assetRef);
                             loadedBundles.Remove(bundle.BundlePath);
                             bundleToSingleSpriteAssets.Remove(bundle);
-
+                            cachedAssetOwner.Remove(bundle);
                             if (!bundle.IsUnloaded())
                             {
                                 bundle.Unload(true);
@@ -161,7 +169,7 @@ namespace ZobieTDCore.Services.AssetBundle
                             singleSpriteToBundle.Remove(assetRef);
                             bundleToSingleSpriteAssets[bundle].Remove(assetName);
                             assetRef.Dispose();
-                            
+
                             mLogger.D($"Force release assetRef ref: {assetName} successfully!");
                         }
                         else if (sucess && bundleRefCount != assetRefCount)
@@ -190,7 +198,7 @@ namespace ZobieTDCore.Services.AssetBundle
             if (animationToBundle.TryGetValue(assetRefs, out var bundle))
             {
                 var assetOwnerKey = MakeAssetOwnerKey(assetOwner, bundle.BundlePath, assetRefs);
-                if (cachedAssetOwner.Remove(assetOwnerKey))
+                if (cachedAssetOwner[bundle].Remove(assetOwnerKey))
                 {
                     (var sucess, var bundleRefCount, var assetRefCount) = assetBundleUsageManager.UnregisterAssetReference<T>(assetRefs);
                     if (forceCleanUpIfNoRefCount)
@@ -204,6 +212,7 @@ namespace ZobieTDCore.Services.AssetBundle
                             animationToBundle.Remove(assetRefs);
                             loadedBundles.Remove(bundle.BundlePath);
                             bundleToAllLoadedSprites.Remove(bundle);
+                            cachedAssetOwner.Remove(bundle);
 
                             if (!bundle.IsUnloaded())
                             {
@@ -260,9 +269,9 @@ namespace ZobieTDCore.Services.AssetBundle
         /// <summary>
         /// Kiểm tra và unload các bundle không còn được sử dụng theo timeout từ AssetBundleUsageManager.
         /// </summary>
-        public void UpdateCachedAssetBundle()
+        public void UpdateCachedAssetBundle(bool forceUnloadWithoutTimeout)
         {
-            foreach (var bundleName in assetBundleUsageManager.GetNeedToUnloadBundle())
+            foreach (var bundleName in assetBundleUsageManager.GetNeedToUnloadBundle(forceUnloadWithoutTimeout))
             {
                 ForceUnloadBundle(bundleName);
             }
@@ -309,6 +318,25 @@ namespace ZobieTDCore.Services.AssetBundle
             {
                 bundle.Unload(unloadAllAsset: true);
                 loadedBundles.Remove(bundlePath);
+                if (bundleToSingleSpriteAssets.ContainsKey(bundle))
+                {
+                    var assetMap = bundleToSingleSpriteAssets[bundle];
+                    foreach (var asset in assetMap.Values)
+                    {
+                        singleSpriteToBundle.Remove(asset);
+                    }
+                    bundleToSingleSpriteAssets.Remove(bundle);
+                }
+
+                if (bundleToAllLoadedSprites.ContainsKey(bundle))
+                {
+                    var animations = bundleToAllLoadedSprites[bundle];
+                    animationToBundle.Remove(animations);
+                    bundleToAllLoadedSprites.Remove(bundle);
+                }
+
+                cachedAssetOwner[bundle].Clear();
+                cachedAssetOwner.Remove(bundle);
             }
         }
 
@@ -319,7 +347,7 @@ namespace ZobieTDCore.Services.AssetBundle
 
 
         internal Dictionary<string, IAssetBundleContract> __GetLoadedBundles() => loadedBundles;
-        internal HashSet<(object assetOwner, string bundlePath, object assetRef)> __GetCachedAssetOwner() => cachedAssetOwner;
+        internal Dictionary<IAssetBundleContract, HashSet<(object assetOwner, string bundlePath, object assetRef)>> __GetCachedAssetOwner() => cachedAssetOwner;
         internal Dictionary<AssetRef<T>, IAssetBundleContract> __GetSingleSpriteToBundle() => singleSpriteToBundle;
         internal Dictionary<IAssetBundleContract, Dictionary<string, AssetRef<T>>> __GetBundleToSingleSpriteAssets() => bundleToSingleSpriteAssets;
         internal Dictionary<AssetRef<T>[], IAssetBundleContract> __GetAnimationBundleMap() => animationToBundle;

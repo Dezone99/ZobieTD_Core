@@ -29,7 +29,7 @@ namespace ZobieTDCore.Services.AssetBundle
         // Sử dụng count để đếm trong trường hợp có nhiều renderer ref đến cùng 1 asset 
         // trong 1 bundle, ta không thể remove asset đó được mà chỉ giảm count thôi
         // đến khi count bằng 0 thì ta mới chắc chắn là đang ko có ref.
-        private Dictionary<object, (string bundleName, int count)> assetRefs = new Dictionary<object, (string bundleName, int count)>();
+        private Dictionary<object, (string bundlePath, int count)> assetRefs = new Dictionary<object, (string bundleName, int count)>();
 
         private float unloadTimeout = 60f;
 
@@ -51,19 +51,19 @@ namespace ZobieTDCore.Services.AssetBundle
                 throw new InvalidOperationException("Asset does not belong to the given bundle!");
             }
 
-            if (!bundleTrackers.TryGetValue(bundle.BundleName, out var tracker))
+            if (!bundleTrackers.TryGetValue(bundle.BundlePath, out var tracker))
             {
                 tracker = new Tracker { lastUsedTime = unityEngineContract.TimeProvider.TimeNow };
-                bundleTrackers[bundle.BundleName] = tracker;
+                bundleTrackers[bundle.BundlePath] = tracker;
             }
 
             tracker.refCount++;
             tracker.lastUsedTime = unityEngineContract.TimeProvider.TimeNow;
 
             if (assetRefs.TryGetValue(asset, out var entry))
-                assetRefs[asset] = (entry.bundleName, entry.count + 1);
+                assetRefs[asset] = (entry.bundlePath, entry.count + 1);
             else
-                assetRefs[asset] = (bundle.BundleName, 1);
+                assetRefs[asset] = (bundle.BundlePath, 1);
 
             if (unityEngineContract.IsDevelopmentBuild)
             {
@@ -84,7 +84,7 @@ namespace ZobieTDCore.Services.AssetBundle
             if (!assetRefs.TryGetValue(asset, out var entry))
                 return (false, -1, -1);
 
-            var bundleName = entry.bundleName;
+            var bundleName = entry.bundlePath;
             int newAssetRefCount = entry.count - 1;
 
             if (newAssetRefCount == 0)
@@ -119,14 +119,16 @@ namespace ZobieTDCore.Services.AssetBundle
         /// <summary>
         /// Trả về danh sách các bundle đã không được sử dụng quá thời gian timeout.
         /// </summary>
-        public List<string> GetNeedToUnloadBundle()
+        public List<string> GetNeedToUnloadBundle(bool forceUnloadWithoutTimeout = false)
         {
             var now = unityEngineContract.TimeProvider.TimeNow;
             var toUnload = new List<string>();
 
             foreach (var kvp in bundleTrackers)
             {
-                if (kvp.Value.refCount == 0 && now - kvp.Value.lastUsedTime > unloadTimeout)
+                if (!forceUnloadWithoutTimeout && kvp.Value.refCount == 0 && now - kvp.Value.lastUsedTime > unloadTimeout)
+                    toUnload.Add(kvp.Key);
+                else if (forceUnloadWithoutTimeout && kvp.Value.refCount == 0)
                     toUnload.Add(kvp.Key);
             }
 
