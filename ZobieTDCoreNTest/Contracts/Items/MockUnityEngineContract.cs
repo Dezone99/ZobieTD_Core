@@ -15,14 +15,14 @@ namespace ZobieTDCoreNTest.Contracts.Items
 {
     internal class MockUnityEngineContract : IUnityEngineContract
     {
-        public string StreamingAssetPath => "";
+        public string StreamingAssetPath => "streaming/assets/path";
         public bool IsDevelopmentBuild { get; set; }
         public ITimeProviderContract TimeProvider { get; set; } = new MockTimeProvider();
 
         public string PersistentDataPath => "";
 
-        public IAssetBundleContract LoadAssetBundleFromFile(string filePath)
-            => MakeNewMockBundleRef?.Invoke(filePath) ?? throw new NotImplementedException();
+        public IAssetBundleContract LoadAssetBundleFromFile(string fullPath, string bundlePath)
+            => MakeNewMockBundleRef?.Invoke(fullPath, bundlePath) ?? throw new NotImplementedException();
 
         public string GetUnityObjectName(object obj)
         {
@@ -38,6 +38,6 @@ namespace ZobieTDCoreNTest.Contracts.Items
             Console.WriteLine(log);
         }
 
-        public Func<string, MockBundleReference>? MakeNewMockBundleRef;
+        public Func<string, string, MockBundleReference>? MakeNewMockBundleRef;
     }
 }

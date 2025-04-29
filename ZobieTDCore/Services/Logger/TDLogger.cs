@@ -27,6 +27,7 @@ namespace ZobieTDCore.Services.Logger
 
         internal static void Init(IUnityEngineContract unityEngineContract)
         {
+            if (isInitialized) return;
             TDLogger.unityEngineContract = unityEngineContract;
             LogFolder = Path.Combine(unityEngineContract.PersistentDataPath, "logs");
             if (!Directory.Exists(LogFolder))

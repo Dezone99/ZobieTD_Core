@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -8,26 +9,42 @@ using ZobieTDCoreNTest.UnityItem;
 
 namespace ZobieTDCoreNTest.Contracts.Items.AssetBundle
 {
+
     internal class MockBundleReference : BaseAssetBundleContract
     {
-        private Dictionary<string, MockUnityAsset> assets;
+        private readonly List<object> realAssets;
+
+        private readonly Dictionary<string, MockUnityAsset> assets;
         private readonly IEnumerable<MockUnityAsset> refs;
 
         public override string BundleName { get; }
+        public string FullPath => fullBundlePath;
+        public string RelativeBundlePath => bundlePath;
+        public bool IsSoftUnloaded => isSoftUnloaded;
 
-        public MockBundleReference(string name, IEnumerable<MockUnityAsset> refs, string bundlePath) : base(bundlePath)
+        public MockBundleReference(string name, IEnumerable<MockUnityAsset> refs
+            , string fullBundlePath, string bundlePath) : base(fullBundlePath, bundlePath)
         {
             this.refs = refs;
             BundleName = name;
             assets = new Dictionary<string, MockUnityAsset>();
+            realAssets = new List<object>();
             foreach (var asset in refs)
             {
                 assets[asset.name] = asset;
+                realAssets.Add(asset.realAsset);
             }
         }
 
         protected override void UnloadInternal(bool unloadAllAsset)
         {
+            if (unloadAllAsset)
+            {
+                foreach (var asset in refs)
+                {
+                    asset.Dispose();
+                }
+            }
             assets.Clear();
         }
 
@@ -54,12 +71,12 @@ namespace ZobieTDCoreNTest.Contracts.Items.AssetBundle
             return assets.Values.ToArray();
         }
 
-        public override void ReloadBundle()
+        public override void ReloadBundleInternal()
         {
-            assets = new Dictionary<string, MockUnityAsset>();
+            int i = 0;
             foreach (var asset in refs)
             {
-                assets[asset.name] = asset;
+                assets[asset.name] = new MockUnityAsset(asset.name, realAssets[i++]);
             }
         }
     }
