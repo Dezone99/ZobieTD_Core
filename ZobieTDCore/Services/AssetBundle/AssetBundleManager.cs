@@ -26,12 +26,12 @@ namespace ZobieTDCore.Services.AssetBundle
             = new Dictionary<IAssetBundleContract, HashSet<(object assetOwner, string bundlePath, object assetRef)>>();
 
         #region Sprite Caching
-        private readonly Dictionary<AssetRef<T>, IAssetBundleContract> singleSpriteToBundle = new Dictionary<AssetRef<T>, IAssetBundleContract>();
-        private readonly Dictionary<IAssetBundleContract, Dictionary<string, AssetRef<T>>> bundleToSingleSpriteAssets = new Dictionary<IAssetBundleContract, Dictionary<string, AssetRef<T>>>();
+        private readonly Dictionary<AssetRef<T>, IAssetBundleContract> singleAssetToBundle = new Dictionary<AssetRef<T>, IAssetBundleContract>();
+        private readonly Dictionary<IAssetBundleContract, Dictionary<string, AssetRef<T>>> bundleToSingleAsset = new Dictionary<IAssetBundleContract, Dictionary<string, AssetRef<T>>>();
         #endregion
 
         #region Animation Caching
-        private readonly Dictionary<IAssetBundleContract, AssetRef<T>[]> bundleToAllLoadedSprites = new Dictionary<IAssetBundleContract, AssetRef<T>[]>();
+        private readonly Dictionary<IAssetBundleContract, AssetRef<T>[]> bundleToAnimation = new Dictionary<IAssetBundleContract, AssetRef<T>[]>();
         private readonly Dictionary<AssetRef<T>[], IAssetBundleContract> animationToBundle = new Dictionary<AssetRef<T>[], IAssetBundleContract>();
         #endregion
 
@@ -44,12 +44,12 @@ namespace ZobieTDCore.Services.AssetBundle
         public AssetRef<T> LoadSingleSubSpriteAsset(object assetOwner, string bundlePath, string spriteName)
         {
             var bundle = LoadAssetBundle(bundlePath);
-            if (!bundleToSingleSpriteAssets.ContainsKey(bundle))
+            if (!bundleToSingleAsset.ContainsKey(bundle))
             {
-                bundleToSingleSpriteAssets[bundle] = new Dictionary<string, AssetRef<T>>();
+                bundleToSingleAsset[bundle] = new Dictionary<string, AssetRef<T>>();
             }
 
-            var sprMap = bundleToSingleSpriteAssets[bundle];
+            var sprMap = bundleToSingleAsset[bundle];
 
             if (!sprMap.TryGetValue(spriteName, out var assetRef))
             {
@@ -63,7 +63,7 @@ namespace ZobieTDCore.Services.AssetBundle
                     throw new InvalidCastException($"Asset is not of type {typeof(T).Name}");
                 assetRef = new AssetRef<T>((T)@ref);
 
-                singleSpriteToBundle[assetRef] = bundle;
+                singleAssetToBundle[assetRef] = bundle;
                 sprMap[spriteName] = assetRef;
             }
 
@@ -88,7 +88,7 @@ namespace ZobieTDCore.Services.AssetBundle
         {
             var bundle = LoadAssetBundle(bundlePath);
 
-            if (!bundleToAllLoadedSprites.TryGetValue(bundle, out var allLoadedSpritesRef))
+            if (!bundleToAnimation.TryGetValue(bundle, out var allLoadedSpritesRef))
             {
                 if (bundle.IsUnloaded())
                 {
@@ -108,7 +108,7 @@ namespace ZobieTDCore.Services.AssetBundle
                     allLoadedSpritesRef[i] = new AssetRef<T>(typedAsset);
                 }
 
-                bundleToAllLoadedSprites[bundle] = allLoadedSpritesRef;
+                bundleToAnimation[bundle] = allLoadedSpritesRef;
                 animationToBundle[allLoadedSpritesRef] = bundle;
             }
 
@@ -135,7 +135,7 @@ namespace ZobieTDCore.Services.AssetBundle
             , AssetRef<T> assetRef
             , bool forceCleanUpIfNoRefCount = false)
         {
-            if (assetRef.Ref != null && singleSpriteToBundle.TryGetValue(assetRef, out var bundle))
+            if (assetRef.Ref != null && singleAssetToBundle.TryGetValue(assetRef, out var bundle))
             {
                 var assetOwnerKey = (assetOwner, bundle.BundlePath, assetRef);
                 if (cachedAssetOwner[bundle].Remove(assetOwnerKey))
@@ -150,9 +150,9 @@ namespace ZobieTDCore.Services.AssetBundle
                         }
                         else if (sucess && bundleRefCount == 0 && assetRefCount == 0)
                         {
-                            singleSpriteToBundle.Remove(assetRef);
+                            singleAssetToBundle.Remove(assetRef);
                             loadedBundles.Remove(bundle.BundlePath);
-                            bundleToSingleSpriteAssets.Remove(bundle);
+                            bundleToSingleAsset.Remove(bundle);
                             cachedAssetOwner.Remove(bundle);
                             if (!bundle.IsUnloaded())
                             {
@@ -166,8 +166,8 @@ namespace ZobieTDCore.Services.AssetBundle
                         }
                         else if (sucess && bundleRefCount > 0 && assetRefCount == 0)
                         {
-                            singleSpriteToBundle.Remove(assetRef);
-                            bundleToSingleSpriteAssets[bundle].Remove(assetName);
+                            singleAssetToBundle.Remove(assetRef);
+                            bundleToSingleAsset[bundle].Remove(assetName);
                             assetRef.Dispose();
 
                             mLogger.D($"Force release assetRef ref: {assetName} successfully!");
@@ -211,7 +211,7 @@ namespace ZobieTDCore.Services.AssetBundle
                         {
                             animationToBundle.Remove(assetRefs);
                             loadedBundles.Remove(bundle.BundlePath);
-                            bundleToAllLoadedSprites.Remove(bundle);
+                            bundleToAnimation.Remove(bundle);
                             cachedAssetOwner.Remove(bundle);
 
                             if (!bundle.IsUnloaded())
@@ -231,7 +231,7 @@ namespace ZobieTDCore.Services.AssetBundle
                         else if (sucess && bundleRefCount > 0 && assetRefCount == 0)
                         {
                             animationToBundle.Remove(assetRefs);
-                            bundleToAllLoadedSprites.Remove(bundle);
+                            bundleToAnimation.Remove(bundle);
                             if (!bundle.IsUnloaded())
                             {
                                 bundle.Unload(true);
@@ -318,21 +318,21 @@ namespace ZobieTDCore.Services.AssetBundle
             {
                 bundle.Unload(unloadAllAsset: true);
                 loadedBundles.Remove(bundlePath);
-                if (bundleToSingleSpriteAssets.ContainsKey(bundle))
+                if (bundleToSingleAsset.ContainsKey(bundle))
                 {
-                    var assetMap = bundleToSingleSpriteAssets[bundle];
+                    var assetMap = bundleToSingleAsset[bundle];
                     foreach (var asset in assetMap.Values)
                     {
-                        singleSpriteToBundle.Remove(asset);
+                        singleAssetToBundle.Remove(asset);
                     }
-                    bundleToSingleSpriteAssets.Remove(bundle);
+                    bundleToSingleAsset.Remove(bundle);
                 }
 
-                if (bundleToAllLoadedSprites.ContainsKey(bundle))
+                if (bundleToAnimation.ContainsKey(bundle))
                 {
-                    var animations = bundleToAllLoadedSprites[bundle];
+                    var animations = bundleToAnimation[bundle];
                     animationToBundle.Remove(animations);
-                    bundleToAllLoadedSprites.Remove(bundle);
+                    bundleToAnimation.Remove(bundle);
                 }
 
                 cachedAssetOwner[bundle].Clear();
@@ -344,13 +344,11 @@ namespace ZobieTDCore.Services.AssetBundle
         /// Truy cập instance AssetBundleUsageManager cho unit test.
         /// </summary>
         internal AssetBundleUsageManager __GetBundleUsageManagerForTest() => assetBundleUsageManager;
-
-
         internal Dictionary<string, IAssetBundleContract> __GetLoadedBundles() => loadedBundles;
         internal Dictionary<IAssetBundleContract, HashSet<(object assetOwner, string bundlePath, object assetRef)>> __GetCachedAssetOwner() => cachedAssetOwner;
-        internal Dictionary<AssetRef<T>, IAssetBundleContract> __GetSingleSpriteToBundle() => singleSpriteToBundle;
-        internal Dictionary<IAssetBundleContract, Dictionary<string, AssetRef<T>>> __GetBundleToSingleSpriteAssets() => bundleToSingleSpriteAssets;
+        internal Dictionary<AssetRef<T>, IAssetBundleContract> __GetSingleAssetToBundle() => singleAssetToBundle;
+        internal Dictionary<IAssetBundleContract, Dictionary<string, AssetRef<T>>> __GetBundleToSingleAsset() => bundleToSingleAsset;
         internal Dictionary<AssetRef<T>[], IAssetBundleContract> __GetAnimationBundleMap() => animationToBundle;
-        internal Dictionary<IAssetBundleContract, AssetRef<T>[]> __GetBundleToAllLoadedSprites() => bundleToAllLoadedSprites;
+        internal Dictionary<IAssetBundleContract, AssetRef<T>[]> __GetBundleToAnimation() => bundleToAnimation;
     }
 }

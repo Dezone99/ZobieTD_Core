@@ -177,6 +177,6 @@ namespace ZobieTDCore.Services.AssetBundle
         /// <summary>
         /// Truy cập nội bộ để test asset reference table.
         /// </summary>
-        internal Dictionary<object, (string bundleName, int count)> __GetAssetRefForTest() => assetRefs;
+        internal Dictionary<object, (string bundlePath, int count)> __GetAssetRefForTest() => assetRefs;
     }
 }

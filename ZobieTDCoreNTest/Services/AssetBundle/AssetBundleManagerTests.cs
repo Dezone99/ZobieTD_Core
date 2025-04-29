@@ -193,7 +193,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
 
             // Should equal to 3
             Assert.That(tracker[assetRef].count, Is.EqualTo(3));
-            Assert.That(tracker[assetRef].bundleName, Is.EqualTo(zombie_idle_bundleRef.RelativeBundlePath));
+            Assert.That(tracker[assetRef].bundlePath, Is.EqualTo(zombie_idle_bundleRef.RelativeBundlePath));
         }
 
         [Test]
@@ -211,7 +211,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             var owner = new MockAssetOwner();
 
             var ownerHashset = manager.__GetCachedAssetOwner();
-            var singleRefToBundle = manager.__GetSingleSpriteToBundle();
+            var singleRefToBundle = manager.__GetSingleAssetToBundle();
             var loadedBundle = manager.__GetLoadedBundles();
             Assert.IsTrue(ownerHashset.Count == 0);
             Assert.IsTrue(loadedBundle.Count == 0);
@@ -237,11 +237,11 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             var owner = new MockAssetOwner();
             var owner2 = new MockAssetOwner();
             var ownerHashset = manager.__GetCachedAssetOwner();
-            var singleSprToBundle = manager.__GetSingleSpriteToBundle();
-            var bundleToSingleSpr = manager.__GetBundleToSingleSpriteAssets();
+            var singleSprToBundle = manager.__GetSingleAssetToBundle();
+            var bundleToSingleSpr = manager.__GetBundleToSingleAsset();
             var animToBundle = manager.__GetAnimationBundleMap();
             var loadedBundle = manager.__GetLoadedBundles();
-            var bundleToAnim = manager.__GetBundleToAllLoadedSprites();
+            var bundleToAnim = manager.__GetBundleToAnimation();
 
             Assert.IsTrue(ownerHashset.Count == 0);
             Assert.IsTrue(loadedBundle.Count == 0);
@@ -314,11 +314,11 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             };
             var owner = new MockAssetOwner();
             var ownerHashset = manager.__GetCachedAssetOwner();
-            var singleSprToBundle = manager.__GetSingleSpriteToBundle();
-            var bundleToSingleSpr = manager.__GetBundleToSingleSpriteAssets();
+            var singleSprToBundle = manager.__GetSingleAssetToBundle();
+            var bundleToSingleSpr = manager.__GetBundleToSingleAsset();
             var animToBundle = manager.__GetAnimationBundleMap();
             var loadedBundle = manager.__GetLoadedBundles();
-            var bundleToAnim = manager.__GetBundleToAllLoadedSprites();
+            var bundleToAnim = manager.__GetBundleToAnimation();
 
             Assert.IsTrue(ownerHashset.Count == 0);
             Assert.IsTrue(loadedBundle.Count == 0);
@@ -378,11 +378,11 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             };
             var owner = new MockAssetOwner();
             var ownerHashset = manager.__GetCachedAssetOwner();
-            var singleSprToBundle = manager.__GetSingleSpriteToBundle();
-            var bundleToSingleSpr = manager.__GetBundleToSingleSpriteAssets();
+            var singleSprToBundle = manager.__GetSingleAssetToBundle();
+            var bundleToSingleSpr = manager.__GetBundleToSingleAsset();
             var animToBundle = manager.__GetAnimationBundleMap();
             var loadedBundle = manager.__GetLoadedBundles();
-            var bundleToAnim = manager.__GetBundleToAllLoadedSprites();
+            var bundleToAnim = manager.__GetBundleToAnimation();
 
             Assert.IsTrue(ownerHashset.Count == 0);
             Assert.IsTrue(loadedBundle.Count == 0);
@@ -440,11 +440,11 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             var owner = new MockAssetOwner();
             var owner2 = new MockAssetOwner();
             var ownerHashset = manager.__GetCachedAssetOwner();
-            var singleSprToBundle = manager.__GetSingleSpriteToBundle();
-            var bundleToSingleSpr = manager.__GetBundleToSingleSpriteAssets();
+            var singleSprToBundle = manager.__GetSingleAssetToBundle();
+            var bundleToSingleSpr = manager.__GetBundleToSingleAsset();
             var animToBundle = manager.__GetAnimationBundleMap();
             var loadedBundle = manager.__GetLoadedBundles();
-            var bundleToAnim = manager.__GetBundleToAllLoadedSprites();
+            var bundleToAnim = manager.__GetBundleToAnimation();
 
             Assert.IsTrue(ownerHashset.Count == 0);
             Assert.IsTrue(loadedBundle.Count == 0);
@@ -593,11 +593,11 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             };
             var owner = new MockAssetOwner();
             var ownerHashset = manager.__GetCachedAssetOwner();
-            var singleSprToBundle = manager.__GetSingleSpriteToBundle();
-            var bundleToSingleSpr = manager.__GetBundleToSingleSpriteAssets();
+            var singleSprToBundle = manager.__GetSingleAssetToBundle();
+            var bundleToSingleSpr = manager.__GetBundleToSingleAsset();
             var animToBundle = manager.__GetAnimationBundleMap();
             var loadedBundle = manager.__GetLoadedBundles();
-            var bundleToAnim = manager.__GetBundleToAllLoadedSprites();
+            var bundleToAnim = manager.__GetBundleToAnimation();
 
             Assert.IsTrue(ownerHashset.Count == 0);
             Assert.IsTrue(loadedBundle.Count == 0);
