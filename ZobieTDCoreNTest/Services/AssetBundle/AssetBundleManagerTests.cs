@@ -49,7 +49,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
                 return zombie_idle_bundleRef;
             };
             var owner = new MockAssetOwner();
-            var assetRef = manager.LoadSingleSubSpriteAsset(owner, mockBundlePath, "zombie_idle_001");
+            var assetRef = manager.LoadSingleSubAsset(owner, mockBundlePath, "zombie_idle_001");
             var asset = assetRef.Ref as MockUnityAsset;
             Assert.IsNotNull(asset);
             Assert.That(asset.name, Is.EqualTo("zombie_idle_001"));
@@ -65,7 +65,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
                 return zombie_idle_bundleRef;
             };
             var owner = new MockAssetOwner();
-            var allAssetsRef = manager.LoadAnimationSpriteAsset(owner, mockBundlePath);
+            var allAssetsRef = manager.LoadAllSubAssets(owner, mockBundlePath);
             Assert.IsNotNull(allAssetsRef);
             Assert.That(allAssetsRef.Length, Is.EqualTo(2));
             Assert.That(allAssetsRef[0].Ref, Is.EqualTo(zombie_idle_001_assetRef));
@@ -81,7 +81,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
                 return zombie_idle_bundleRef;
             };
             var owner = new MockAssetOwner();
-            var asset = manager.LoadSingleSubSpriteAsset(owner, mockBundlePath, "zombie_idle_001");
+            var asset = manager.LoadSingleSubAsset(owner, mockBundlePath, "zombie_idle_001");
             var tracker = manager.__GetBundleUsageManagerForTest().__GetAssetRefForTest();
 
             Assert.That(tracker.ContainsKey(asset), Is.True);
@@ -100,24 +100,24 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             };
 
             var owner = new MockAssetOwner();
-            var assets = manager.LoadAnimationSpriteAsset(owner, mockBundlePath);
+            var assets = manager.LoadAllSubAssets(owner, mockBundlePath);
 
             var bundleUsageManager = manager.__GetBundleUsageManagerForTest();
             var animationToBundleMap = manager.__GetAnimationBundleMap();
             var assetTracker = bundleUsageManager.__GetAssetRefForTest();
             var bundleTracker = bundleUsageManager.__GetBundleTrackerForTest();
 
-            var loadedBundles = manager.GetLoadedBundles();
+            var loadedBundles = manager.__GetLoadedBundles();
 
             // Assert pre-condition
             Assert.That(assetTracker.Count, Is.GreaterThan(0), "Should have assets tracked before release.");
             Assert.That(bundleTracker.Count, Is.GreaterThan(0), "Should have bundle tracked before release.");
-            Assert.That(loadedBundles, Does.Contain(mockBundlePath), "Bundle zombie_idle should be loaded before release.");
+            Assert.That(loadedBundles, Does.ContainKey(mockBundlePath), "Bundle zombie_idle should be loaded before release.");
             Assert.That(animationToBundleMap.ContainsKey(assets), Is.True, "Animation is cached before release.");
             // Act
             manager.ReleaseAnimationAssetRef(owner, assets, forceCleanUpIfNoRefCount: true);
 
-            Assert.That(manager.GetLoadedBundles(), Does.Not.Contain(mockBundlePath), "Bundle zombie_idle should have been unloaded from manager.");
+            Assert.That(manager.__GetLoadedBundles(), Does.Not.ContainKey(mockBundlePath), "Bundle zombie_idle should have been unloaded from manager.");
             Assert.That(animationToBundleMap.ContainsKey(assets), Is.False, "Animation is cached before release.");
             Assert.That(assetTracker.ContainsKey(assets), Is.False, $"Animation ssset should have been untracked.");
             foreach (var asset in assets)
@@ -140,7 +140,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
                 return null;
             };
             var owner = new MockAssetOwner();
-            var animSprites = manager.LoadAnimationSpriteAsset(owner, mockBundlePath);
+            var animSprites = manager.LoadAllSubAssets(owner, mockBundlePath);
 
             var bundle = manager.__GetAnimationBundleMap()[animSprites];
             Assert.That(bundle.IsUnloaded(), Is.True);
@@ -160,13 +160,13 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
                 return null;
             };
             var owner = new MockAssetOwner();
-            var animSprites = manager.LoadAnimationSpriteAsset(owner, mockBundlePath);
+            var animSprites = manager.LoadAllSubAssets(owner, mockBundlePath);
 
             var bundle = manager.__GetAnimationBundleMap()[animSprites];
             Assert.That(bundle.IsUnloaded(), Is.True);
             Assert.True(((MockBundleReference)bundle).IsSoftUnloaded);
 
-            var sprite = manager.LoadSingleSubSpriteAsset(owner, mockBundlePath, mockSprName1);
+            var sprite = manager.LoadSingleSubAsset(owner, mockBundlePath, mockSprName1);
             Assert.That(bundle.IsUnloaded(), Is.False);
             Assert.False(((MockBundleReference)bundle).IsSoftUnloaded);
         }
@@ -184,9 +184,9 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             var owner2 = new MockAssetOwner();
             var owner3 = new MockAssetOwner();
 
-            var assetRef = manager.LoadSingleSubSpriteAsset(owner, mockBundlePath, "zombie_idle_001");
-            var assetRef2 = manager.LoadSingleSubSpriteAsset(owner2, mockBundlePath, "zombie_idle_001");
-            var assetRef3 = manager.LoadSingleSubSpriteAsset(owner3, mockBundlePath, "zombie_idle_001");
+            var assetRef = manager.LoadSingleSubAsset(owner, mockBundlePath, "zombie_idle_001");
+            var assetRef2 = manager.LoadSingleSubAsset(owner2, mockBundlePath, "zombie_idle_001");
+            var assetRef3 = manager.LoadSingleSubAsset(owner3, mockBundlePath, "zombie_idle_001");
 
             Assert.That(assetRef, Is.EqualTo(assetRef2));
             Assert.That(assetRef2, Is.EqualTo(assetRef3));
@@ -216,8 +216,8 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.IsTrue(ownerHashset.Count == 0);
             Assert.IsTrue(loadedBundle.Count == 0);
 
-            var sprite = manager.LoadSingleSubSpriteAsset(owner, mockBundlePath, "zombie_idle_001");
-            Assert.IsTrue(ownerHashset[zombie_idle_bundleRef].Contains((owner, zombie_idle_bundleRef.RelativeBundlePath, sprite)));
+            var sprite = manager.LoadSingleSubAsset(owner, mockBundlePath, "zombie_idle_001");
+            Assert.IsTrue(ownerHashset[zombie_idle_bundleRef].ContainsKey((owner, zombie_idle_bundleRef.RelativeBundlePath, sprite)));
             Assert.IsTrue(loadedBundle.ContainsKey(zombie_idle_bundleRef.BundlePath));
             Assert.NotNull(sprite.Ref);
         }
@@ -253,9 +253,9 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.IsTrue(bundleToSingleSpr.Count == 0);
 
 
-            var animSprites = manager.LoadAnimationSpriteAsset(owner, mockBundlePath);
+            var animSprites = manager.LoadAllSubAssets(owner, mockBundlePath);
             Assert.IsTrue(loadedBundle.ContainsKey(zombie_idle_bundleRef.RelativeBundlePath));
-            Assert.IsTrue(ownerHashset[zombie_idle_bundleRef].Contains((owner, zombie_idle_bundleRef.RelativeBundlePath, animSprites)));
+            Assert.IsTrue(ownerHashset[zombie_idle_bundleRef].ContainsKey((owner, zombie_idle_bundleRef.RelativeBundlePath, animSprites)));
             Assert.IsTrue(animToBundle.ContainsKey(animSprites));
             Assert.IsTrue(bundleToAnim[zombie_idle_bundleRef] == animSprites);
 
@@ -271,7 +271,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.AreEqual(2, animSprites.Length);
 
             // Gọi load lần 2 nhưng chung owner
-            var animSprites2 = manager.LoadAnimationSpriteAsset(owner, mockBundlePath);
+            var animSprites2 = manager.LoadAllSubAssets(owner, mockBundlePath);
 
             Assert.IsTrue(ownerHashset.Count == 1);
             Assert.IsTrue(ownerHashset[zombie_idle_bundleRef].Count == 1);
@@ -286,7 +286,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.AreEqual(2, animSprites2.Length);
 
 
-            var animSprites3 = manager.LoadAnimationSpriteAsset(owner2, mockBundlePath);
+            var animSprites3 = manager.LoadAllSubAssets(owner2, mockBundlePath);
 
             Assert.IsTrue(ownerHashset[zombie_idle_bundleRef].Count == 2);
             Assert.IsTrue(loadedBundle.Count == 1);
@@ -328,7 +328,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
 
             Assert.IsTrue(singleSprToBundle.Count == 0);
             Assert.IsTrue(bundleToSingleSpr.Count == 0);
-            var animSprites = manager.LoadAnimationSpriteAsset(owner, mockBundlePath);
+            var animSprites = manager.LoadAllSubAssets(owner, mockBundlePath);
 
             Assert.IsTrue(ownerHashset.Count == 1);
             Assert.IsTrue(loadedBundle.Count == 1);
@@ -392,7 +392,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
 
             Assert.IsTrue(singleSprToBundle.Count == 0);
             Assert.IsTrue(bundleToSingleSpr.Count == 0);
-            var animSprites = manager.LoadAnimationSpriteAsset(owner, mockBundlePath);
+            var animSprites = manager.LoadAllSubAssets(owner, mockBundlePath);
 
             Assert.IsTrue(ownerHashset.Count == 1);
             Assert.IsTrue(ownerHashset[zombie_idle_bundleRef].Count == 1);
@@ -455,9 +455,9 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.IsTrue(singleSprToBundle.Count == 0);
             Assert.IsTrue(bundleToSingleSpr.Count == 0);
 
-            var animSprites = manager.LoadAnimationSpriteAsset(owner, mockBundlePath);
-            var sprite = manager.LoadSingleSubSpriteAsset(owner, mockBundlePath, mockSprName1);
-            var sprite2 = manager.LoadSingleSubSpriteAsset(owner, mockBundlePath, mockSprName1);
+            var animSprites = manager.LoadAllSubAssets(owner, mockBundlePath);
+            var sprite = manager.LoadSingleSubAsset(owner, mockBundlePath, mockSprName1);
+            var sprite2 = manager.LoadSingleSubAsset(owner, mockBundlePath, mockSprName1);
 
             Assert.IsTrue(ownerHashset.Count == 1);
             Assert.IsTrue(ownerHashset[zombie_idle_bundleRef].Count == 2);
@@ -471,7 +471,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.IsTrue(bundleToSingleSpr[zombie_idle_bundleRef].Count == 1);
             Assert.IsTrue(bundleToSingleSpr[zombie_idle_bundleRef].ContainsKey(mockSprName1));
 
-            var sprite3 = manager.LoadSingleSubSpriteAsset(owner, mockBundlePath, mockSprName2);
+            var sprite3 = manager.LoadSingleSubAsset(owner, mockBundlePath, mockSprName2);
             Assert.IsTrue(ownerHashset.Count == 1);
             Assert.IsTrue(ownerHashset[zombie_idle_bundleRef].Count == 3);
             Assert.IsTrue(loadedBundle.Count == 1);
@@ -485,7 +485,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.IsTrue(bundleToSingleSpr[zombie_idle_bundleRef].ContainsKey(mockSprName1));
             Assert.IsTrue(bundleToSingleSpr[zombie_idle_bundleRef].ContainsKey(mockSprName2));
 
-            var sprite4 = manager.LoadSingleSubSpriteAsset(owner2, mockBundlePath, mockSprName2);
+            var sprite4 = manager.LoadSingleSubAsset(owner2, mockBundlePath, mockSprName2);
             Assert.IsTrue(ownerHashset.Count == 1);
             Assert.IsTrue(ownerHashset[zombie_idle_bundleRef].Count == 4);
             Assert.IsTrue(loadedBundle.Count == 1);
@@ -608,8 +608,8 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.IsTrue(singleSprToBundle.Count == 0);
             Assert.IsTrue(bundleToSingleSpr.Count == 0);
 
-            var animSprites = manager.LoadAnimationSpriteAsset(owner, mockBundlePath);
-            var sprite = manager.LoadSingleSubSpriteAsset(owner, mockBundlePath, mockSprName1);
+            var animSprites = manager.LoadAllSubAssets(owner, mockBundlePath);
+            var sprite = manager.LoadSingleSubAsset(owner, mockBundlePath, mockSprName1);
 
             Assert.IsTrue(ownerHashset.Count == 1);
             Assert.IsTrue(ownerHashset[zombie_idle_bundleRef].Count == 2);

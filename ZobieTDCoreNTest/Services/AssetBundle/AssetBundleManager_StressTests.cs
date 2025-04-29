@@ -11,6 +11,7 @@ using ZobieTDCoreNTest.Contracts.Items;
 using ZobieTDCoreNTest.UnityItem;
 using ZobieTDCore.Contracts.Items.AssetBundle;
 using static ZobieTDCore.Services.AssetBundle.AssetBundleUsageManager;
+using System.Collections.Concurrent;
 
 namespace ZobieTDCoreNTest.Services.AssetBundle
 {
@@ -85,14 +86,14 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
 
 
         private AssetBundleUsageManager assetBundleUsageManager;
-        private Dictionary<string, IAssetBundleContract> loadedBundles;
-        private Dictionary<IAssetBundleContract, HashSet<(object assetOwner, string bundlePath, object assetRef)>> cachedAssetOwner;
-        private Dictionary<AssetRef<MockUnityAsset>, IAssetBundleContract> singleAssetToBundle;
-        private Dictionary<IAssetBundleContract, Dictionary<string, AssetRef<MockUnityAsset>>> bundleToSingleAsset;
-        private Dictionary<AssetRef<MockUnityAsset>[], IAssetBundleContract> animationToBundle;
-        private Dictionary<IAssetBundleContract, AssetRef<MockUnityAsset>[]> bundleToAnimation;
-        private Dictionary<string, Tracker> bundleTrackers;
-        private Dictionary<object, (string bundlePath, int count)> assetRefsTracker;
+        private ConcurrentDictionary<string, IAssetBundleContract> loadedBundles;
+        private ConcurrentDictionary<IAssetBundleContract, ConcurrentDictionary<(object assetOwner, string bundlePath, object assetRef), byte>> cachedAssetOwner;
+        private ConcurrentDictionary<AssetRef<MockUnityAsset>, IAssetBundleContract> singleAssetToBundle;
+        private ConcurrentDictionary<IAssetBundleContract, ConcurrentDictionary<string, AssetRef<MockUnityAsset>>> bundleToSingleAsset;
+        private ConcurrentDictionary<AssetRef<MockUnityAsset>[], IAssetBundleContract> animationToBundle;
+        private ConcurrentDictionary<IAssetBundleContract, AssetRef<MockUnityAsset>[]> bundleToAnimation;
+        private ConcurrentDictionary<string, Tracker> bundleTrackers;
+        private ConcurrentDictionary<object, (string bundlePath, int count)> assetRefsTracker;
 
         [SetUp]
         public void Setup()
@@ -138,6 +139,12 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             bundleToAnimation = manager.__GetBundleToAnimation();
         }
 
+        [TearDown]
+        public void TearDown()
+        {
+            zombie_running_bundleRef = null;
+            zombie_idle_bundleRef = null;
+        }
         [Test]
         public void StressTest_1()
         {
@@ -151,7 +158,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.AreEqual(animationToBundle.Count, 0);
             Assert.AreEqual(bundleToAnimation.Count, 0);
 
-            var assetRef = manager.LoadSingleSubSpriteAsset(owner
+            var assetRef = manager.LoadSingleSubAsset(owner
                 , ZombieRunningBundleRef.BUNDLE_PATH_RELATIVE
                 , ZombieRunningBundleRef.ASSET_1_NAME);
 
@@ -160,7 +167,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.AreEqual(loadedBundles.ContainsKey(zombie_running_bundleRef.BundlePath), true);
             Assert.AreEqual(cachedAssetOwner.Count, 1);
             Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].Count, 1);
-            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].Contains(
+            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].ContainsKey(
                 (owner, zombie_running_bundleRef.BundlePath, assetRef)
                 ), true);
             Assert.AreEqual(singleAssetToBundle.Count, 1);
@@ -169,7 +176,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.AreEqual(bundleToAnimation.Count, 0);
 
 
-            var assetRef2 = manager.LoadSingleSubSpriteAsset(owner
+            var assetRef2 = manager.LoadSingleSubAsset(owner
                 , ZombieRunningBundleRef.BUNDLE_PATH_RELATIVE
                 , ZombieRunningBundleRef.ASSET_1_NAME);
 
@@ -178,7 +185,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.AreEqual(loadedBundles.ContainsKey(zombie_running_bundleRef.BundlePath), true);
             Assert.AreEqual(cachedAssetOwner.Count, 1);
             Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].Count, 1);
-            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].Contains(
+            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].ContainsKey(
                 (owner, zombie_running_bundleRef.BundlePath, assetRef)
                 ), true);
             Assert.AreEqual(singleAssetToBundle.Count, 1);
@@ -186,7 +193,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.AreEqual(animationToBundle.Count, 0);
             Assert.AreEqual(bundleToAnimation.Count, 0);
 
-            var assetRef3 = manager.LoadSingleSubSpriteAsset(owner
+            var assetRef3 = manager.LoadSingleSubAsset(owner
                 , ZombieRunningBundleRef.BUNDLE_PATH_RELATIVE
                 , ZombieRunningBundleRef.ASSET_2_NAME);
 
@@ -195,7 +202,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.AreEqual(loadedBundles.ContainsKey(zombie_running_bundleRef.BundlePath), true);
             Assert.AreEqual(cachedAssetOwner.Count, 1);
             Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].Count, 2);
-            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].Contains(
+            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].ContainsKey(
                 (owner, zombie_running_bundleRef.BundlePath, assetRef3)
                 ), true);
             Assert.AreEqual(singleAssetToBundle.Count, 2);
@@ -205,7 +212,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.AreEqual(bundleToAnimation.Count, 0);
 
 
-            var assetRef4 = manager.LoadAnimationSpriteAsset(owner
+            var assetRef4 = manager.LoadAllSubAssets(owner
                 , ZombieRunningBundleRef.BUNDLE_PATH_RELATIVE);
 
             Assert.AreEqual(bundleTrackers[zombie_running_bundleRef.BundlePath].refCount, 3);
@@ -213,10 +220,10 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.AreEqual(loadedBundles.ContainsKey(zombie_running_bundleRef.BundlePath), true);
             Assert.AreEqual(cachedAssetOwner.Count, 1);
             Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].Count, 3);
-            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].Contains(
+            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].ContainsKey(
                 (owner, zombie_running_bundleRef.BundlePath, assetRef3)
                 ), true);
-            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].Contains(
+            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].ContainsKey(
                 (owner, zombie_running_bundleRef.BundlePath, assetRef4)
                 ), true);
             Assert.AreEqual(singleAssetToBundle.Count, 2);
@@ -233,10 +240,10 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.AreEqual(loadedBundles.ContainsKey(zombie_running_bundleRef.BundlePath), true);
             Assert.AreEqual(cachedAssetOwner.Count, 1);
             Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].Count, 2);
-            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].Contains(
+            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].ContainsKey(
                 (owner, zombie_running_bundleRef.BundlePath, assetRef3)
                 ), true);
-            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].Contains(
+            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].ContainsKey(
                 (owner, zombie_running_bundleRef.BundlePath, assetRef4)
                 ), false);
             Assert.AreEqual(singleAssetToBundle.Count, 2);
@@ -252,10 +259,10 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.AreEqual(loadedBundles.ContainsKey(zombie_running_bundleRef.BundlePath), true);
             Assert.AreEqual(cachedAssetOwner.Count, 1);
             Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].Count, 2);
-            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].Contains(
+            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].ContainsKey(
                 (owner, zombie_running_bundleRef.BundlePath, assetRef3)
                 ), true);
-            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].Contains(
+            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].ContainsKey(
                 (owner, zombie_running_bundleRef.BundlePath, assetRef4)
                 ), false);
             Assert.AreEqual(singleAssetToBundle.Count, 2);
@@ -270,10 +277,10 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.AreEqual(loadedBundles.ContainsKey(zombie_running_bundleRef.BundlePath), true);
             Assert.AreEqual(cachedAssetOwner.Count, 1);
             Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].Count, 1);
-            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].Contains(
+            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].ContainsKey(
                 (owner, zombie_running_bundleRef.BundlePath, assetRef3)
                 ), false);
-            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].Contains(
+            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].ContainsKey(
                   (owner, zombie_running_bundleRef.BundlePath, assetRef)
                   ), true);
             Assert.AreEqual(singleAssetToBundle.Count, 2);
@@ -289,10 +296,10 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             Assert.AreEqual(loadedBundles.ContainsKey(zombie_running_bundleRef.BundlePath), true);
             Assert.AreEqual(cachedAssetOwner.Count, 1);
             Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].Count, 0);
-            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].Contains(
+            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].ContainsKey(
                 (owner, zombie_running_bundleRef.BundlePath, assetRef3)
                 ), false);
-            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].Contains(
+            Assert.AreEqual(cachedAssetOwner[zombie_running_bundleRef].ContainsKey(
                   (owner, zombie_running_bundleRef.BundlePath, assetRef)
                   ), false);
             Assert.AreEqual(singleAssetToBundle.Count, 2);
@@ -320,11 +327,11 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
             var owner1 = new MockAssetOwner();
             var owner2 = new MockAssetOwner();
 
-            var assetRef1 = manager.LoadSingleSubSpriteAsset(owner1
+            var assetRef1 = manager.LoadSingleSubAsset(owner1
                 , ZombieIdleBundleRef.BUNDLE_PATH_RELATIVE
                 , ZombieIdleBundleRef.ASSET_1_NAME);
 
-            var assetRef2 = manager.LoadSingleSubSpriteAsset(owner2
+            var assetRef2 = manager.LoadSingleSubAsset(owner2
                 , ZombieIdleBundleRef.BUNDLE_PATH_RELATIVE
                 , ZombieIdleBundleRef.ASSET_1_NAME);
 
@@ -348,11 +355,11 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
 
             for (int i = 0; i < 50; i++)
             {
-                var assetRefRun = manager.LoadSingleSubSpriteAsset(owner
+                var assetRefRun = manager.LoadSingleSubAsset(owner
                     , ZombieRunningBundleRef.BUNDLE_PATH_RELATIVE
                     , ZombieRunningBundleRef.ASSET_1_NAME);
 
-                var assetRefIdle = manager.LoadSingleSubSpriteAsset(owner
+                var assetRefIdle = manager.LoadSingleSubAsset(owner
                     , ZombieIdleBundleRef.BUNDLE_PATH_RELATIVE
                     , ZombieIdleBundleRef.ASSET_1_NAME);
 
@@ -372,9 +379,9 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
         {
             var owner = new MockAssetOwner();
 
-            var animRefs = manager.LoadAnimationSpriteAsset(owner, ZombieRunningBundleRef.BUNDLE_PATH_RELATIVE);
+            var animRefs = manager.LoadAllSubAssets(owner, ZombieRunningBundleRef.BUNDLE_PATH_RELATIVE);
 
-            var singleAssetRef = manager.LoadSingleSubSpriteAsset(owner
+            var singleAssetRef = manager.LoadSingleSubAsset(owner
                 , ZombieRunningBundleRef.BUNDLE_PATH_RELATIVE
                 , ZombieRunningBundleRef.ASSET_1_NAME);
 
@@ -393,7 +400,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
         public void StressTest_ReleaseTwiceSameAsset()
         {
             var owner = new MockAssetOwner();
-            var assetRef = manager.LoadSingleSubSpriteAsset(owner
+            var assetRef = manager.LoadSingleSubAsset(owner
                 , ZombieRunningBundleRef.BUNDLE_PATH_RELATIVE
                 , ZombieRunningBundleRef.ASSET_1_NAME);
 
@@ -410,7 +417,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
         public void StressTest_ForceUnloadStillReferenced()
         {
             var owner = new MockAssetOwner();
-            var assetRef = manager.LoadSingleSubSpriteAsset(owner
+            var assetRef = manager.LoadSingleSubAsset(owner
                 , ZombieRunningBundleRef.BUNDLE_PATH_RELATIVE
                 , ZombieRunningBundleRef.ASSET_1_NAME);
 
@@ -423,7 +430,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
         public void StressTest_OwnerGCBehavior()
         {
             var owner = new MockAssetOwner();
-            var assetRef = manager.LoadSingleSubSpriteAsset(owner
+            var assetRef = manager.LoadSingleSubAsset(owner
                 , ZombieRunningBundleRef.BUNDLE_PATH_RELATIVE
                 , ZombieRunningBundleRef.ASSET_1_NAME);
 
@@ -444,7 +451,7 @@ namespace ZobieTDCoreNTest.Services.AssetBundle
 
             for (int i = 0; i < 10; i++)
             {
-                refs.Add(manager.LoadSingleSubSpriteAsset(owner
+                refs.Add(manager.LoadSingleSubAsset(owner
                     , ZombieRunningBundleRef.BUNDLE_PATH_RELATIVE
                     , ZombieRunningBundleRef.ASSET_1_NAME));
             }
